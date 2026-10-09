@@ -305,6 +305,7 @@ tr.cancel td{color:var(--muted)}
 .acclist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:4px 10px;margin-top:6px}
 .accrow{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-weight:400;cursor:pointer}.accrow:last-child{border-bottom:0}.accrow input{width:16px;height:16px;flex:none}
 .regmsg{white-space:pre-wrap;font:inherit;font-size:12.5px;background:var(--soft,#f6f5f1);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:6px 0 0}
+.mediabox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--soft,#faf9f6)}.mediabox label{display:block;margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -395,7 +396,7 @@ function items(t,s){return STAGES[s][2].map((it,i)=>({text:it[0],sugg:!!it[1],ke
 
 /* =================== store =================== */
 let DB;
-const emptyDB=()=>({trips:[],regs:[],ledger:[],withdrawals:[],check:{},due:{},teams:{},reports:{},archive:[],forms:{},users:[],log:[],settings:{backend:'',driveRoot:''}});
+const emptyDB=()=>({trips:[],regs:[],ledger:[],withdrawals:[],check:{},due:{},teams:{},reports:{},archive:[],forms:{},priv:{},users:[],log:[],settings:{backend:'',driveRoot:''}});
 const BE=()=>BACKEND_URL||((DB&&DB.settings&&DB.settings.backend)||'');
 const pj=(v,d)=>{try{return v?JSON.parse(v):d}catch(e){return d}};
 function load(){
@@ -416,6 +417,7 @@ function ents(db){const m={},put=(c,k,o)=>m[c+'|'+k]=JSON.stringify(o);
   new Set([...Object.keys(db.check),...Object.keys(db.due)]).forEach(t=>put('workflow',t,{trip:t,check:JSON.stringify(db.check[t]||{}),due:JSON.stringify(db.due[t]||{})}));
   for(const t in db.teams)put('teams',t,{trip:t,teams:JSON.stringify(db.teams[t])});
   put('settings','forms',{key:'forms',value:JSON.stringify(db.forms||{})});
+  if(can('all'))put('settings','private',{key:'private',value:JSON.stringify(db.priv||{})});
   return m}
 function queueDiff(){
   const cur=ents(DB),ops=[];
@@ -447,7 +449,7 @@ async function loadRemote(pre){
   j.reports.forEach(r=>{const o=Object.assign({},r);delete o.trip;DB.reports[r.trip]=o});
   j.workflow.forEach(w=>{DB.check[w.trip]=pj(w.check,{});DB.due[w.trip]=pj(w.due,{})});
   j.teams.forEach(x=>DB.teams[x.trip]=pj(x.teams,[]));normTeams();
-  (j.settings||[]).forEach(x=>{if(x.key==='forms')DB.forms=pj(x.value,{})});
+  (j.settings||[]).forEach(x=>{if(x.key==='forms')DB.forms=pj(x.value,{});if(x.key==='private')DB.priv=pj(x.value,{})});
   if(j.me){S.user=Object.assign({},S.user,j.me);try{['sessionStorage','localStorage'].forEach(k=>{const st=window[k],o=JSON.parse(st.getItem('towmt-sess')||'null');if(o){o.user=S.user;st.setItem('towmt-sess',JSON.stringify(o))}})}catch(e){}}
   SNAP=ents(DB);setSync('Live from Google Sheet','ok');
   if(autoLink())save();
@@ -586,7 +588,7 @@ function renderInner(){
   root.innerHTML=`<header class="top"><div class="wrap">
     <div class="brand"><img src="${LOGO_MARK}" alt="">TOW Missions Trip</div>
     <nav class="tabs" aria-label="Main">${[['overview','Overview'],['trips','Trips'],['people','Participants'],...(can('all')?[['stats','Statistics']]:[]),...(can('admin')?[['admin','Admin']]:[])].map(([v,l])=>`<button data-act="view" data-v="${v}" aria-current="${(S.trip?'trips':S.view)===v?'page':'false'}">${l}</button>`).join('')}</nav>
-    <div class="who"><button id="sync" class="sync ${S.syncCls}" data-act="retry">${esc(S.sync)}</button> ${esc(u.name)} (${esc(roleLabel(u))})<button data-act="logout">Sign out</button></div>
+    <div class="who"><button id="sync" class="sync ${S.syncCls}" data-act="retry">${esc(S.sync)}</button> ${esc(u.name)} (${esc(roleLabel(u))})<button data-act="logout" title="App version ${APP_VER}">Sign out</button></div>
   </div></header><main><div class="wrap" id="app"></div></main>`;
   $('#app').innerHTML=S.trip&&T(S.trip)?vTrip(T(S.trip)):({overview:vOverview,trips:vTrips,people:vPeople,stats:can('all')?vStats:vOverview,admin:vAdmin}[S.view]||vOverview)();
   requestAnimationFrame(()=>{const f=document.querySelector('.track .fill');if(f)f.style.width=f.dataset.w});
@@ -677,6 +679,16 @@ function vTrip(t){
   <div class="subtabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-act="tab" data-t="${k}" aria-selected="${S.tab===k}">${l}</button>`).join('')}</div>
   ${({workflow:()=>tWorkflow(t,sel),people:()=>tPeople(t),teams:()=>tTeams(t),finance:()=>tFinance(t),withdrawals:()=>tWithdraw(t),report:()=>tReport(t)})[S.tab]()}`;
 }
+const mediaRoot=()=>((DB.priv||{}).mediaRoot||DB.settings.driveRoot||'').trim();
+function mediaBox(t){
+  const L=(t.media||'').trim(),msg=`*${t.dest} ${yearOf(t)}: photos & videos*\nPlease upload your trip photos and videos here:\n${L}\nOnly this trip's folder is shared through this link.`;
+  if(can('all'))return `<div class="mediabox"><label>Upload folder for this trip <small>PIC and team see only this folder</small></label>
+    <div class="row" style="flex-wrap:nowrap"><input class="inp" type="url" placeholder="Paste this trip's folder link" value="${esc(L)}" data-set="trip|${t.id}|media">${L?`<a class="btn sm" href="${esc(L)}" target="_blank" rel="noopener">Open</a>`:''}${mediaRoot()?`<a class="btn sm" href="${esc(mediaRoot())}" target="_blank" rel="noopener">Open media archive</a>`:''}</div>
+    ${L?'':`<p class="small muted" style="margin:6px 0 0">In the media archive, create a folder for this trip (e.g. "${esc(t.dest)} ${yearOf(t)}"), then on that folder choose Share → Can edit → Copy link, and paste it here. Don't share the main archive link.</p>`}${L?shareRow(L,msg):''}</div>`;
+  return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
+}
+const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
+const APP_VER='5.7';
 const regLink=()=>((DB.forms||{}).regform||'').trim();
 function regMsg(t){const L=[`*TOW Missions Trip: ${t.dest} ${yearOf(t)}*`,`Dates: ${fr(t.start,t.end)}`];
   if(+t.fee)L.push(`Trip fee: ${rm(t.fee)}${+t.deposit?` (deposit ${rm(t.deposit)}${t.depositDue?' by '+fd(t.depositDue):''})`:''}`);
@@ -700,7 +712,7 @@ function tWorkflow(t,s){
     tlink:()=>{const L=tLinks(t).filter(l=>l.active);return `<span class="small">${L.length?L.map(l=>`<span class="badge b-green">${esc(l.name)}</span>`).join(' '):'<span class="muted">No links yet.</span>'} <button class="link small" data-act="tab" data-t="finance">Manage treasurer links in Finance</button></span>`},
     surplus:()=>{const f=finance(t),L=f.L.filter(l=>['Surplus refund','Donation to church','Other close-out'].includes(l.cat)),ref=L.filter(l=>l.cat==='Surplus refund');return `<div class="small">Balance now <b>${rm(f.balance)}</b>${L.length?` · Refunded ${rm(ref.reduce((a,l)=>a+ +l.amount,0))} to ${ref.length} people · Donated/other ${rm(L.filter(l=>l.cat!=='Surplus refund').reduce((a,l)=>a+ +l.amount,0))}`:''}${can('edit')&&f.balance>0.009?` <button class="btn sm pri" style="margin-left:6px" data-act="surplus" data-id="${t.id}">Distribute surplus</button>`:''}</div>`},
     closetrip:()=>closeBox(t),
-    media:()=>`<div class="form"><div class="full"><label>Final folder link (after transfer to the church database)</label><div class="row" style="flex-wrap:nowrap"><input class="inp" type="url" placeholder="https://drive.google.com/drive/folders/..." value="${esc(t.mediaFinal||'')}" data-set="trip|${t.id}|mediaFinal" ${ro}>${t.mediaFinal?`<a class="btn sm" href="${esc(t.mediaFinal)}" target="_blank" rel="noopener">Open</a>`:''}</div></div></div>`,
+    media:()=>`${mediaBox(t)}<div class="form" style="margin-top:10px"><div class="full"><label>Final folder link (after transfer to the church database)</label><div class="row" style="flex-wrap:nowrap"><input class="inp" type="url" placeholder="https://drive.google.com/drive/folders/..." value="${esc(t.mediaFinal||'')}" data-set="trip|${t.id}|mediaFinal" ${ro}>${t.mediaFinal?`<a class="btn sm" href="${esc(t.mediaFinal)}" target="_blank" rel="noopener">Open</a>`:''}</div></div></div>`,
     report:()=>{const r=DB.reports[t.id]||{};return `<div class="row"><button class="btn sm pri" data-act="tab" data-t="report">${r.summary?'Open mission report':'Fill in mission report'}</button>${formBtn('report')}<span class="small muted">${r.submitted?'Submitted '+fd(r.submitted):r.summary?'Draft started':'Not started'}</span></div>`}
   };
   const notes={4:'<p class="wfnote">Where practical, the PIC makes approved purchases and claims reimbursement. For larger amounts, the church advances the funds. Avoid team members paying personally and claiming later.</p>',
@@ -788,10 +800,8 @@ function tWithdraw(t){
 function tReport(t){
   const d=DB.reports[t.id]||{},ro=can('edit')?'':'disabled';
   return `${forms(['report'])}<div class="panel"><div class="stephead"><h2>Mission report</h2><div class="formsbar" style="margin:0"><button class="link" data-act="printrep" data-id="${t.id}">Print mission report (PDF)</button><button class="link" data-act="print" data-id="${t.id}">Print full trip pack</button></div></div>
-  <div class="form" style="margin-bottom:18px"><div class="full"><label>Shared cloud folder for photos & videos <small>Google Drive, OneDrive or Dropbox link the team uploads to</small></label>
-   <div class="row" style="flex-wrap:nowrap"><input type="url" placeholder="https://drive.google.com/drive/folders/..." value="${esc(t.media)}" data-set="trip|${t.id}|media" ${ro}>${t.media?`<a class="btn" href="${esc(t.media)}" target="_blank" rel="noopener">Open</a>`:''}</div></div></div>
   <div class="form">${RFIELDS.map(([k,l,h,full])=>`<div class="${full?'full':''}"><label for="r-${k}">${l} ${h?`<small>${h}</small>`:''}</label>
-   ${full?`<textarea id="r-${k}" data-rep="${t.id}|${k}" ${ro}>${esc(d[k]||'')}</textarea>${ro?'':`<div class="aibar"><button class="btn sm" data-act="ai" data-task="grammar" data-k="${k}">Fix grammar</button><button class="btn sm" data-act="ai" data-task="zh" data-k="${k}">Translate to 中文</button><button class="btn sm" data-act="ai" data-task="en" data-k="${k}">Translate to English</button>${S.undo[k]!==undefined?`<button class="link small" data-act="undo" data-k="${k}">Undo</button>`:''}<span class="small muted" id="ai-${k}"></span></div>`}`:`<input id="r-${k}" data-rep="${t.id}|${k}" value="${esc(d[k]||'')}" ${ro}>`}</div>`).join('')}</div>
+   ${full?`<textarea id="r-${k}" data-rep="${t.id}|${k}" ${ro}>${esc(d[k]||'')}</textarea>${ro?'':`<div class="aibar"><button class="btn sm" data-act="ai" data-task="grammar" data-k="${k}">Fix grammar</button><button class="btn sm" data-act="ai" data-task="zh" data-k="${k}">Translate to 中文</button><button class="btn sm" data-act="ai" data-task="en" data-k="${k}">Translate to English</button>${S.undo[k]!==undefined?`<button class="link small" data-act="undo" data-k="${k}">Undo</button>`:''}<span class="small muted" id="ai-${k}"></span></div>`}`:`<input id="r-${k}" data-rep="${t.id}|${k}" value="${esc(d[k]||'')}" ${ro}>`}</div>${k==='mediaMethod'?`<div class="full">${mediaBox(t)}</div>`:''}`).join('')}</div>
   <p class="small muted" id="saved" style="min-height:18px;margin:10px 0 0"></p></div>`;
 }
 
@@ -844,7 +854,7 @@ function vAdmin(){
   if(!can('admin'))return '<p class="empty">Admins only.</p>';
   const UU=BE()?(S.adm||{}).users||[]:DB.users,LL=BE()?(S.adm||{}).logs||[]:DB.log;
   const L=LL.filter(l=>!S.lf||l.user===S.lf).slice(0,300),showIP=L.some(l=>l.ip&&l.ip!=='unavailable');
-  return `<div class="pagehead"><div><h1>Admin</h1><p class="sub">Users, access history and settings</p></div></div>
+  return `<div class="pagehead"><div><h1>Admin</h1><p class="sub">Users, access history and settings · app version ${APP_VER}</p></div></div>
   <div class="panel"><h2>Users</h2><div class="tbl"><table><thead><tr><th>User ID</th><th>Name</th><th>Role</th><th>Trips they can see</th><th>Last sign-in</th><th></th></tr></thead><tbody>
   ${S.adm&&S.adm.loading?'<tr><td colspan="6" class="muted">Loading…</td></tr>':''}${UU.map(u=>{const ls=LL.find(l=>l.user===u.id&&l.action==='Signed in');return `<tr><td>${esc(u.id)}</td><td>${esc(u.name)}</td><td>${esc(roleLabel(u))}</td><td class="small">${u.role==='PIC'?((u.trips||[]).length?(u.trips||[]).map(c=>{const t=T(c);return t?`${esc(t.dest)} ${yearOf(t)}`:esc(c)}).join(', '):'<span class="badge b-amber">None assigned</span>'):'<span class="muted">All trips</span>'}</td><td>${ls?fdt(ls.t):'Never'}</td><td><button class="link small" data-act="access" data-u="${esc(u.id)}">Access</button> · <button class="link small" data-act="pw" data-u="${esc(u.id)}">Reset password</button>${u.id!==(me()||{}).id?` · <button class="link small" data-act="rmuser" data-u="${esc(u.id)}">Remove</button>`:''}</td></tr>`}).join('')}</tbody></table></div>
   <form class="form" data-form="user" style="margin-top:14px"><div><label>User ID</label><input name="id" required pattern="[a-zA-Z0-9._-]+"></div><div><label>Name</label><input name="name" required></div>
@@ -860,7 +870,7 @@ function vAdmin(){
   <div class="tbl"><table class="sm"><thead><tr><th>Form</th><th>File in forms folder</th><th>Or use a link instead</th></tr></thead><tbody><tr><td><b>Google registration form</b><div class="small muted">Shown to PICs in Step 2 to share</div></td><td class="small muted">Online form</td><td><input class="inp" type="url" placeholder="https://forms.gle/..." value="${esc(regLink())}" data-set="regform"></td></tr>${Object.entries(FORMS).map(([k,f])=>{const sc=S.formScan&&!S.formScan.busy?S.formScan:null,hit=sc&&sc.map[k];return `<tr><td><b>${esc(f.title)}</b></td><td><button class="link small" data-act="form" data-f="${k}" data-std="1">${esc(hit?hit.name:f.file)}</button>${sc?(hit?' <span class="badge b-green">Found</span>':' <span class="badge b-red">Missing</span>'):''}</td><td><input class="inp" type="url" placeholder="Leave blank to use the standard PDF" value="${esc((DB.forms||{})[k]||'')}" data-set="formlink|${k}"></td></tr>`}).join('')}</tbody></table></div>
   <div class="row" style="margin-top:10px"><button class="btn sm" data-act="scanforms">${S.formScan&&S.formScan.busy?'Checking…':'Check forms folder on GitHub'}</button><span class="small muted">${S.formScan&&!S.formScan.busy?(S.formScan.err?esc(S.formScan.err):`${S.formScan.files.length} PDF${S.formScan.files.length===1?'':'s'} found. Renamed files are matched by keyword (Registration, Refund, Itinerary…).`):'Files can have any name as long as it includes the form\'s keyword.'}</span></div></div>
   <div class="panel"><h2>Settings</h2><form class="form" data-form="settings"><div class="full"><label>Apps Script web app link <small>Connects live Google Sheet data, AI on GitHub, and server-side logins</small></label><input name="backend" type="url" value="${esc(BACKEND_URL||DB.settings.backend)}" ${BACKEND_URL?'readonly':''} placeholder="https://script.google.com/macros/s/.../exec"></div>
-  <div class="full"><label>Main cloud folder for mission media</label><input name="driveRoot" type="url" value="${esc(DB.settings.driveRoot)}" placeholder="https://drive.google.com/drive/folders/..."></div><div class="full"><button class="btn pri">Save settings</button></div></form></div>
+  <div class="full"><label>Media archive (main folder) <small>Admin and Accounts only. PICs never see this link; they get their own trip folder link.</small></label><input name="driveRoot" type="url" value="${esc(mediaRoot())}" placeholder="https://1drv.ms/f/..."></div><div class="full"><button class="btn pri">Save settings</button></div></form></div>
   ${(()=>{const d=findDups();return d.count?`<div class="panel"><h2>Duplicates found</h2><p class="small">${d.count} participant record${d.count>1?'s are':' is a'} duplicate${d.count>1?'s':''} (same name and IC on the same trip), probably from importing the same file twice. Clean-up keeps one record per person, merges any missing details into it, moves their payments, team and withdrawal to that record, and removes repeated finance rows.</p><ul class="small" style="margin:0 0 10px;padding-left:18px">${d.regDup.slice(0,8).map(g=>`<li>${esc(g[0].name)} · ${esc((T(g[0].trip)||{}).dest||g[0].trip)} ${T(g[0].trip)?yearOf(T(g[0].trip)):''} × ${g.length}</li>`).join('')}${d.regDup.length>8?`<li>and ${d.regDup.length-8} more</li>`:''}</ul><button class="btn pri" data-act="cleandups">Download backup, then clean up</button></div>`:''})()}
   <div class="panel"><h2>Data</h2><div class="row"><button class="btn" data-act="backup">Download backup (JSON)</button>${BE()?'':'<button class="btn" data-act="wipe">Clear all trip data on this device</button>'}</div>
   <p class="small muted" style="margin:10px 0 0">${BE()?'All data lives in the Google Sheet. The backup is a copy for safekeeping (IC numbers stay masked).':'Users and access history are kept when clearing.'}</p></div>`;
@@ -1274,7 +1284,7 @@ document.addEventListener('submit',async e=>{
     if(v.role==='PIC'&&!v.trips.length&&DB.trips.length&&!confirm('No trip ticked. This PIC will see nothing until you assign a trip. Add anyway?'))return}
   if(k==='user'&&BE()){try{await api('adduser',{id:v.id,name:v.name,role:v.role,pw:v.pw,trips:v.trips,access:v.access});S.adm=await api('admin');render()}catch(err){alert(err.message)}return}
   if(k==='user'){if(DB.users.find(u=>u.id.toLowerCase()===v.id.toLowerCase())){alert('That user ID already exists.');return}const salt=uid();DB.users.push({id:v.id,name:v.name,role:v.role,salt,hash:await sha(salt+v.pw),created:new Date().toISOString(),trips:v.trips,access:v.access});save();log('Added user',`${v.id} (${v.role})`);render();return}
-  if(k==='settings'){const was=BE();if(!BACKEND_URL)DB.settings.backend=(v.backend||'').trim();DB.settings.driveRoot=v.driveRoot.trim();await log('Changed settings');
+  if(k==='settings'){const was=BE();if(!BACKEND_URL)DB.settings.backend=(v.backend||'').trim();DB.settings.driveRoot=v.driveRoot.trim();DB.priv=DB.priv||{};DB.priv.mediaRoot=v.driveRoot.trim();await log('Changed settings');
     if(BE()!==was){try{localStorage.setItem(STORE,JSON.stringify(BE()?{settings:DB.settings}:Object.assign(emptyDB(),{settings:DB.settings})))}catch(x){}alert(BE()?'Connected. Sign in with your Google Sheet user account.':'Disconnected from Google Sheet.');ME=null;S.token=null;S.user=null;SNAP=null;try{sessionStorage.clear()}catch(x){}load();render();return}
     save();render();return}
 });
