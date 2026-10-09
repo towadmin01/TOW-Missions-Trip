@@ -609,7 +609,7 @@ function vLogin(){return `<div class="login"><div class="card">
 </div></div>`}
 function vSetup(){return `<div class="login"><div class="card">
   <img src="${LOGO_FULL}" alt="Tabernacle of Worship A/G"><h1>Create the first admin account</h1>
-  <form data-form="setup"><label for="su">User ID</label><input class="inp" id="su" name="id" required pattern="[a-zA-Z0-9._-]+">
+  <form data-form="setup"><label for="su">User ID</label><input class="inp" id="su" name="id" required autocomplete="off" autocapitalize="none" data-uid>
   <label for="sn">Your name</label><input class="inp" id="sn" name="name" required>
   <label for="sp">Password (8+ characters)</label><input class="inp" id="sp" name="pw" type="password" minlength="8" required autocomplete="new-password">
   <button class="btn pri" style="width:100%;justify-content:center;margin-top:14px">Create account</button></form>
@@ -688,7 +688,9 @@ function mediaBox(t){
   return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
 }
 const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
-const APP_VER='5.7';
+const APP_VER='5.9';
+// User IDs: spaces become dots, other symbols are dropped (e.g. "Mary Tan" → "mary.tan")
+const cleanId=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[.]|[.]$/g,'');
 const regLink=()=>((DB.forms||{}).regform||'').trim();
 function regMsg(t){const L=[`*TOW Missions Trip: ${t.dest} ${yearOf(t)}*`,`Dates: ${fr(t.start,t.end)}`];
   if(+t.fee)L.push(`Trip fee: ${rm(t.fee)}${+t.deposit?` (deposit ${rm(t.deposit)}${t.depositDue?' by '+fd(t.depositDue):''})`:''}`);
@@ -839,6 +841,19 @@ function tripPicker(sel,uname){
   return `<div class="acclist">${ts.map(t=>{const named=nm&&[t.pic,t.apic].some(x=>String(x||'').trim().toLowerCase()===nm);
     return `<label class="accrow"><input type="checkbox" name="trip" value="${esc(t.id)}" ${sel.has(t.id)?'checked':''}> <span><b>${esc(t.dest)}</b> ${yearOf(t)} <span class="muted small">· ${esc(t.id)} · ${fd(t.start)}${t.status==='Cancelled'?' · cancelled':isClosed(t)?' · closed':''}<br>PIC: ${esc(t.pic||'not set')}${t.apic?' · A.PIC: '+esc(t.apic):''}</span>${named?' <span class="badge b-green">Named on this trip</span>':''}</span></label>`}).join('')||'<p class="muted small">No trips yet. Add trips first, then assign them here.</p>'}</div>`;
 }
+const appUrl=()=>location.origin+location.pathname.replace(/index\.html$/,'');
+function welcomeMsg(u,pw,reset){
+  const tr=u.role==='PIC'?(u.trips||[]).map(c=>{const t=T(c);return t?`${t.dest} ${yearOf(t)}`:c}):[];
+  const L=[reset?`Hi ${u.name}, your password for *TOW Missions Trip* has been reset.`:`Hi ${u.name}, you now have access to *TOW Missions Trip*, our mission trip system.`,'',
+    `Link: ${appUrl()}`,`User ID: ${u.id}`,`Password: ${pw}`];
+  if(!reset){L.push(`Role: ${u.role==='PIC'?'PIC'+(u.access==='View'?' (view only)':''):u.role}`);if(u.role==='PIC')L.push(`Your trip${tr.length>1?'s':''}: ${tr.join(', ')||'to be assigned'}`)}
+  L.push('','Please keep your password private and don\'t share it with others.');return L.join('\n');
+}
+function vWelcome(u,pw,reset){const m=welcomeMsg(u,pw,reset);
+  return `<div class="sheethead"><div><h2>${reset?'Password reset':'User added'}</h2><p class="sub">Send ${esc(u.name)} their sign-in details</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
+  <pre class="regmsg">${esc(m)}</pre>
+  <div class="row" style="margin-top:12px"><button class="btn" data-act="copy" data-v="${esc(m)}">Copy message</button><a class="btn pri" href="https://wa.me/?text=${encodeURIComponent(m)}" target="_blank" rel="noopener">Share on WhatsApp</a><button class="btn" data-act="closebtn">Done</button></div>
+  <p class="small muted" style="margin:10px 0 0">The password is shown only now. If it's lost, use Reset password.</p>`}
 function vAccess(id){
   const u=(BE()?(S.adm||{}).users||[]:DB.users).find(x=>x.id===id);if(!u)return '<p class="empty">User not found.</p>';
   const mine=new Set(u.trips||[]),role=['Admin','Accounts','PIC'].includes(u.role)?u.role:'PIC';
@@ -857,7 +872,7 @@ function vAdmin(){
   return `<div class="pagehead"><div><h1>Admin</h1><p class="sub">Users, access history and settings · app version ${APP_VER}</p></div></div>
   <div class="panel"><h2>Users</h2><div class="tbl"><table><thead><tr><th>User ID</th><th>Name</th><th>Role</th><th>Trips they can see</th><th>Last sign-in</th><th></th></tr></thead><tbody>
   ${S.adm&&S.adm.loading?'<tr><td colspan="6" class="muted">Loading…</td></tr>':''}${UU.map(u=>{const ls=LL.find(l=>l.user===u.id&&l.action==='Signed in');return `<tr><td>${esc(u.id)}</td><td>${esc(u.name)}</td><td>${esc(roleLabel(u))}</td><td class="small">${u.role==='PIC'?((u.trips||[]).length?(u.trips||[]).map(c=>{const t=T(c);return t?`${esc(t.dest)} ${yearOf(t)}`:esc(c)}).join(', '):'<span class="badge b-amber">None assigned</span>'):'<span class="muted">All trips</span>'}</td><td>${ls?fdt(ls.t):'Never'}</td><td><button class="link small" data-act="access" data-u="${esc(u.id)}">Access</button> · <button class="link small" data-act="pw" data-u="${esc(u.id)}">Reset password</button>${u.id!==(me()||{}).id?` · <button class="link small" data-act="rmuser" data-u="${esc(u.id)}">Remove</button>`:''}</td></tr>`}).join('')}</tbody></table></div>
-  <form class="form" data-form="user" style="margin-top:14px"><div><label>User ID</label><input name="id" required pattern="[a-zA-Z0-9._-]+"></div><div><label>Name</label><input name="name" required></div>
+  <form class="form" data-form="user" style="margin-top:14px"><div><label>User ID <small>used to sign in · no spaces (e.g. mary.tan)</small></label><input name="id" required autocomplete="off" autocapitalize="none" spellcheck="false" data-uid></div><div><label>Name</label><input name="name" required></div>
   <div><label>Role</label><select name="role" data-accrole><option>PIC</option><option>Accounts</option><option>Admin</option></select></div><div><label>Password</label><input name="pw" type="password" minlength="8" required autocomplete="new-password"></div>
   <div class="full" data-acctrips><label>Trips this PIC can see <small>tick one or more; the app goes by the trip you tick, not by the name typed</small></label>${tripPicker(new Set(),'')}
   <label style="margin-top:10px">PIC access</label><select name="access" style="max-width:220px"><option value="Edit">Can edit</option><option value="View">View only</option></select></div>
@@ -1231,7 +1246,7 @@ document.addEventListener('click',async e=>{
     case 'importmodal':modal(vImport(),true);break;
     case 'retry':if(/Not saved/.test(S.sync)){setSync('Saving…','');flush()}break;
     case 'wipe':if(confirm('Remove all trips, participants and finance data? Users and access history are kept.')){Object.assign(DB,{trips:[],regs:[],ledger:[],withdrawals:[],check:{},due:{},teams:{},reports:{},archive:[]});save();log('Cleared all trip data');go({view:'overview'})}break;
-    case 'pw':{const p=prompt(`New password for ${d.u} (8+ characters)`);if(p&&p.length>=8&&BE()){try{await api('setpw',{id:d.u,pw:p});alert('Password changed.')}catch(err){alert(err.message)}break}if(p&&p.length>=8){const u=DB.users.find(x=>x.id===d.u);u.salt=uid();u.hash=await sha(u.salt+p);save();log('Reset password',d.u);render()}break}
+    case 'pw':{const p=prompt(`New password for ${d.u} (8+ characters)`);if(p&&p.length>=8&&BE()){try{await api('setpw',{id:d.u,pw:p});const u=((S.adm||{}).users||[]).find(x=>x.id===d.u)||{id:d.u,name:d.u};modal(vWelcome(u,p,1),true)}catch(err){alert(err.message)}break}if(p&&p.length>=8){const u=DB.users.find(x=>x.id===d.u);u.salt=uid();u.hash=await sha(u.salt+p);save();log('Reset password',d.u);render()}break}
     case 'access':modal(vAccess(d.u),true);break;
     case 'rmuser':if(confirm(`Remove user ${d.u}?`)&&BE()){try{await api('rmuser',{id:d.u});S.adm=null;render()}catch(err){alert(err.message)}break}if(!BE()&&confirm(`Confirm again: remove ${d.u}?`)){DB.users=DB.users.filter(u=>u.id!==d.u);save();log('Removed user',d.u);render()}break;
   }
@@ -1280,14 +1295,16 @@ document.addEventListener('submit',async e=>{
   if(k==='access'){const id=f.dataset.u,trips=[...f.querySelectorAll('input[name=trip]:checked')].map(x=>x.value),acc={role:v.role,access:v.access==='View'?'View':'Edit',trips:v.role==='PIC'?trips:[]};
     if(BE()){try{await api('setaccess',Object.assign({id},acc));closeModal();S.adm=null;render()}catch(err){alert(err.message)}return}
     const u=DB.users.find(x=>x.id===id);if(u){Object.assign(u,acc);save();log('Changed access',`${id}: ${acc.role}`)}closeModal();render();return}
+  if(k==='user'||k==='setup'){v.id=cleanId(v.id);if(!v.id){alert('Please enter a User ID using letters or numbers, e.g. mary.tan');return}}
   if(k==='user'){v.trips=v.role==='PIC'?[...f.querySelectorAll('input[name=trip]:checked')].map(x=>x.value):[];v.access=v.access==='View'?'View':'Edit';
     if(v.role==='PIC'&&!v.trips.length&&DB.trips.length&&!confirm('No trip ticked. This PIC will see nothing until you assign a trip. Add anyway?'))return}
-  if(k==='user'&&BE()){try{await api('adduser',{id:v.id,name:v.name,role:v.role,pw:v.pw,trips:v.trips,access:v.access});S.adm=await api('admin');render()}catch(err){alert(err.message)}return}
-  if(k==='user'){if(DB.users.find(u=>u.id.toLowerCase()===v.id.toLowerCase())){alert('That user ID already exists.');return}const salt=uid();DB.users.push({id:v.id,name:v.name,role:v.role,salt,hash:await sha(salt+v.pw),created:new Date().toISOString(),trips:v.trips,access:v.access});save();log('Added user',`${v.id} (${v.role})`);render();return}
+  if(k==='user'&&BE()){try{await api('adduser',{id:v.id,name:v.name,role:v.role,pw:v.pw,trips:v.trips,access:v.access});S.adm=await api('admin');render();modal(vWelcome(v,v.pw),true)}catch(err){alert(err.message)}return}
+  if(k==='user'){if(DB.users.find(u=>u.id.toLowerCase()===v.id.toLowerCase())){alert('That user ID already exists.');return}const salt=uid();DB.users.push({id:v.id,name:v.name,role:v.role,salt,hash:await sha(salt+v.pw),created:new Date().toISOString(),trips:v.trips,access:v.access});save();log('Added user',`${v.id} (${v.role})`);render();modal(vWelcome(v,v.pw),true);return}
   if(k==='settings'){const was=BE();if(!BACKEND_URL)DB.settings.backend=(v.backend||'').trim();DB.settings.driveRoot=v.driveRoot.trim();DB.priv=DB.priv||{};DB.priv.mediaRoot=v.driveRoot.trim();await log('Changed settings');
     if(BE()!==was){try{localStorage.setItem(STORE,JSON.stringify(BE()?{settings:DB.settings}:Object.assign(emptyDB(),{settings:DB.settings})))}catch(x){}alert(BE()?'Connected. Sign in with your Google Sheet user account.':'Disconnected from Google Sheet.');ME=null;S.token=null;S.user=null;SNAP=null;try{sessionStorage.clear()}catch(x){}load();render();return}
     save();render();return}
 });
+document.addEventListener('input',e=>{if(e.target.matches('[data-uid]')){const el=e.target,c=cleanId(el.value);if(el.value.endsWith(' ')&&c)return;if(c!==el.value){el.value=c}}});
 document.addEventListener('change',e=>{
   if(e.target.matches('[data-accrole]')){const pic=e.target.value==='PIC',m=e.target.closest('form');m.querySelector('[data-acctrips]').hidden=!pic;const n=m.querySelector('[data-accnote]');n.hidden=pic;n.textContent=e.target.value+' users see every trip.';return}
   const el=e.target;
