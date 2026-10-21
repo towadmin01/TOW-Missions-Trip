@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#b5985a">
-<title>TOW Mission Treasurer</title>
+<title>TOW Mission Entries</title>
 <style>
 :root{--bg:#f5f5f1;--surface:#fff;--ink:#26251f;--muted:#69665a;--line:#e1ded2;--gold:#b5985a;--gold-ink:#7a6230;--gold-soft:#f5eedf;--green:#2f7a55;--green-soft:#e2f0e8;--red:#b0432f;--red-soft:#f8e4df;--amber:#9a6a00;--amber-soft:#fbefd2;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -38,6 +38,9 @@ td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
 .note{font-size:13px;color:var(--muted)}
 .warn{background:var(--red-soft);color:var(--red);border-radius:10px;padding:10px 12px;font-size:14px}
 .tiny{font-size:12px;color:var(--muted);margin-top:8px}
+.seg.three{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
+.plist{display:flex;flex-wrap:wrap;gap:6px 14px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;max-height:200px;overflow:auto}
+.pk{display:flex;gap:6px;align-items:center;font-weight:500;margin:0;font-size:14px}.pk input{width:18px;height:18px;padding:0}
 </style>
 </head>
 <body>
@@ -55,21 +58,26 @@ const rm=n=>'RM'+(Math.round((+n||0)*100)/100).toLocaleString('en-MY',{maximumFr
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 let S={name:'',info:null,entries:[]};try{S=Object.assign(S,JSON.parse(localStorage.getItem(SK)||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
-let dir='out',busy=false,msg='';
+let dir='out',busy=false,msg='',forMode='',forSel=new Set();
 
 async function call(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error);return j}
 async function sync(){
   if(busy||!API||!navigator.onLine)return;busy=true;
   try{
-    if(!S.info){S.info=await call({action:'tInfo',trip:TRIP,key:KEY});save()}
+    S.info=await call({action:'tInfo',trip:TRIP,key:KEY});save();
     const q=S.entries.filter(e=>!e.sent);
     if(q.length){const j=await call({action:'tEntry',trip:TRIP,key:KEY,name:S.name,entries:q.map(({sent,...e})=>e)});(j.saved||[]).forEach(id=>{const e=S.entries.find(x=>x.id===id);if(e)e.sent=true});save();msg=''}
   }catch(e){msg=(e instanceof TypeError||/fetch|network|load failed/i.test(e.message))?'':e.message}
   busy=false;render();
 }
+// Split trips: say who an expense was for, so each person's refund is fair
+function forUI(){const I=S.info,mode=forMode||(I.me?'me':'all');
+  return `<label>Who is this for?</label><div class="seg three"><button type="button" data-f="all" aria-pressed="${mode==='all'}">Everyone</button>${I.me?`<button type="button" data-f="me" aria-pressed="${mode==='me'}">Just me</button>`:''}<button type="button" data-f="some" aria-pressed="${mode==='some'}">Choose people</button></div>
+  ${mode==='some'?`<div class="plist">${(I.people||[]).map(p=>`<label class="pk"><input type="checkbox" value="${esc(p.id)}" ${forSel.has(p.id)?'checked':''}> ${esc(p.name)}</label>`).join('')}</div>`:''}`}
+const nameOf=id=>((S.info&&S.info.people||[]).find(p=>p.id===id)||{}).name||'1 person';
 function render(){
   const app=$('#app');
-  const head=`<header><img src="${LOGO}" alt=""><b>TOW Mission Treasurer</b></header>
+  const head=`<header><img src="${LOGO}" alt=""><b>TOW Mission Entries</b></header>
    <div class="trip">${S.info?esc(S.info.title):esc(TRIP)} <span class="net ${navigator.onLine?'on':'off'}">${navigator.onLine?'Online':'Offline: entries are kept on this phone'}</span></div>`;
   if(!TRIP||!KEY||!API){app.innerHTML=head+'<div class="warn">This link is incomplete. Ask the trip PIC for the treasurer link again.</div>';return}
   if(msg&&/turned off|not valid|cancelled|closed/i.test(msg)){app.innerHTML=head+`<div class="warn">${esc(msg)}</div>`;return}
@@ -85,17 +93,21 @@ function render(){
     <label for="ct">Category</label><select id="ct">${(dir==='in'?IN:OUT).map(c=>`<option>${c}</option>`).join('')}</select>
     <label for="ds">Description</label><input id="ds" required placeholder="${dir==='in'?'e.g. Love gift from Grace Church':'e.g. Lunch for Team 1, van petrol'}">
     <label for="am">Amount (RM)</label><input id="am" type="number" inputmode="decimal" step="0.01" min="0.01" required>
+    ${dir==='out'&&S.info&&S.info.split?forUI():''}
     ${dir==='out'?`<label for="pb">Paid from</label><select id="pb"><option value="Team treasurer">Team cash (treasurer)</option><option value="Personal (claim)">Paid personally, to claim back</option></select>`:''}
     <button class="btn">Save entry</button></form>
     ${msg?`<p class="tiny" style="color:var(--red)">${esc(msg)}</p>`:''}</div>
    <div class="card"><div class="sum"><div><span>In</span><b>${rm(inn)}</b></div><div><span>Out</span><b>${rm(out)}</b></div><div><span>Balance</span><b>${rm(inn-out)}</b></div></div>
     <p class="tiny">${q?`${q} entr${q>1?'ies':'y'} waiting to send. They send automatically when you are back online.`:'All entries sent to the church records.'}</p>
     <table><thead><tr><th>Date</th><th>Description</th><th class="num">In</th><th class="num">Out</th><th class="num">Balance</th></tr></thead><tbody>
-    ${list.map(e=>{bal+=(e.dir==='in'?1:-1)*e.amount;return `<tr><td>${e.date.slice(5)}</td><td>${esc(e.desc)}<br><span class="note">${esc(e.cat)}${e.paidBy==='Personal (claim)'?' · personal claim':''}</span> <span class="${e.sent?'s':'q'}">${e.sent?'Sent':'Waiting'}</span></td><td class="num">${e.dir==='in'?rm(e.amount):''}</td><td class="num">${e.dir==='out'?rm(e.amount):''}</td><td class="num">${rm(bal)}</td></tr>`}).reverse().join('')||'<tr><td colspan="5" class="note">No entries yet.</td></tr>'}
+    ${list.map(e=>{bal+=(e.dir==='in'?1:-1)*e.amount;return `<tr><td>${e.date.slice(5)}</td><td>${esc(e.desc)}<br><span class="note">${esc(e.cat)}${e.paidBy==='Personal (claim)'?' · personal claim':''}${Array.isArray(e.split)&&e.split.length?' · for '+(e.split.length===1?esc(nameOf(e.split[0])):e.split.length+' people'):''}</span> <span class="${e.sent?'s':'q'}">${e.sent?'Sent':'Waiting'}</span></td><td class="num">${e.dir==='in'?rm(e.amount):''}</td><td class="num">${e.dir==='out'?rm(e.amount):''}</td><td class="num">${rm(bal)}</td></tr>`}).reverse().join('')||'<tr><td colspan="5" class="note">No entries yet.</td></tr>'}
     </tbody></table><p class="tiny">Recording as ${esc(S.name)}. Keep every receipt. Pay from team cash so no one needs to claim later.</p><p class="tiny"><b>Tip:</b> add this page to your home screen (Share or ⋮ menu → Add to Home Screen) so it opens even with no signal.</p></div>`;
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{dir=b.dataset.d;render()});
+  app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{forMode=b.dataset.f;render()});
+  app.querySelectorAll('.plist input').forEach(c=>c.onchange=()=>{c.checked?forSel.add(c.value):forSel.delete(c.value)});
   $('#ef').onsubmit=e=>{e.preventDefault();const a=+$('#am').value;if(!(a>0))return;
-    S.entries.push({id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),date:$('#dt').value,dir,cat:$('#ct').value,desc:$('#ds').value.trim(),amount:Math.round(a*100)/100,paidBy:dir==='out'?$('#pb').value:'',sent:false});
+    S.entries.push({id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),date:$('#dt').value,dir,cat:$('#ct').value,desc:$('#ds').value.trim(),amount:Math.round(a*100)/100,paidBy:dir==='out'?$('#pb').value:'',split:(()=>{if(dir!=='out'||!S.info||!S.info.split)return '';const m=forMode||(S.info.me?'me':'all');return m==='me'?[S.info.me]:m==='some'?[...forSel]:''})(),sent:false});
+    if(forMode==='some'&&!forSel.size){S.entries.pop();alert('Tick at least one person, or choose Everyone.');return}
     save();render();sync()};
 }
 addEventListener('online',()=>{render();sync()});addEventListener('offline',render);

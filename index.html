@@ -426,6 +426,16 @@ tr.cancel td{color:var(--muted)}
 .achips{display:flex;flex-wrap:wrap;gap:6px;margin:-6px 0 16px}
 .achip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
 .achip .dot{margin-top:0}.achip[aria-pressed="true"]{border-color:var(--ol);background:var(--ol-soft)}
+
+/* v6.4 */
+.pdfv{max-height:72vh;overflow:auto;background:var(--sunk);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:8px}
+.pdfv canvas{background:#fff;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.lset{display:grid;grid-template-columns:minmax(200px,300px) minmax(0,460px);gap:10px 16px;align-items:center;margin-top:6px}
+.lset label{font-size:13px;font-weight:700}
+.tlink{font-size:inherit;font-weight:800;color:var(--ink)}.tlink:hover{color:var(--ol-ink)}
+.hfil{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.hfil select,.hfil input[type=search]{width:auto;flex:1 1 160px}.hfil label{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600}.hfil label .inp{width:auto}
+@media (max-width:640px){.lset{grid-template-columns:1fr}.lset label{margin-top:6px}}
 </style>
 </head>
 <body>
@@ -726,7 +736,16 @@ async function ai(task,text){
 
 /* =================== router =================== */
 const S={view:'overview',year:TODAY.getFullYear(),trip:null,tab:'workflow',stage:null,f:'all',q:'',lf:'',revealed:{},revealT:null,undo:{},token:null,user:null,sync:'',syncCls:'',adm:null,rmk:null};
-function go(p){Object.assign(S,p);render();window.scrollTo({top:0})}
+// navigation history: the browser Back button (and Backspace) return to the previous page
+const NAVK=['view','trip','tab','stage','f','admTab','ovTrip','year'];
+const navState=()=>{const o={app:1};NAVK.forEach(k=>o[k]=S[k]);return o};
+function pushNav(){try{const st=navState(),cur=history.state;if(cur&&cur.app&&NAVK.every(k=>cur[k]===st[k]))return;history.pushState(st,'')}catch(e){}}
+function go(p){Object.assign(S,p);pushNav();render();window.scrollTo({top:0})}
+addEventListener('popstate',e=>{const st=e.state;if(!st||!st.app)return;if($('#modal').innerHTML){closeModal()}NAVK.forEach(k=>S[k]=st[k]);S.adm=S.view==='admin'?S.adm:null;render()});
+try{history.replaceState(navState(),'')}catch(e){}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#modal').innerHTML){closeModal();return}
+  if(e.key!=='Backspace'||e.defaultPrevented)return;const el=e.target;if(el&&(el.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)))return;if($('#modal').innerHTML){closeModal();return}
+  if(history.state&&history.state.app){e.preventDefault();history.back()}});
 function render(){
   const ae=document.activeElement,keep=ae&&ae.dataset&&(ae.dataset.set||ae.dataset.rep)?`[data-${ae.dataset.set?'set':'rep'}="${(ae.dataset.set||ae.dataset.rep).replace(/"/g,'\\"')}"]`:null;
   renderInner();
@@ -786,7 +805,7 @@ function vOverview(){
     <div class="grid2" style="margin-top:12px"><div>${chart()}${can('all')?'<button class="link small" data-act="archmodal">+ Add past-year totals</button>':''}</div><div>${yearTable()}<h3 style="font-size:13px;margin:14px 0 6px">Most-visited destinations</h3>${topDest()}</div></div></details>`;
 }
 function ovDetail(t){const f=finance(t),c=conf(t),paid=c.filter(r=>t.fee&&paidOf(r)>=t.fee).length,a=attention(t).slice(0,5),ns=isCancelled(t)?'':nextStep(t);
-  return `<div class="panel ovd"><div class="stephead"><div><h2>${esc(t.dest)} ${yearOf(t)} ${statusBadge(t)}</h2><p class="sub" style="margin:2px 0 0">${fr(t.start,t.end)} · ${t.overseas?'Overseas':'Local'} · PIC ${esc(t.pic||'not set')}${t.apic?' · A.PIC '+esc(t.apic):''}</p></div><button class="btn pri sm" data-act="trip" data-id="${t.id}">Open trip ›</button></div>
+  return `<div class="panel ovd"><div class="stephead"><div><h2><button class="link tlink" data-act="trip" data-id="${t.id}" title="Open trip">${esc(t.dest)} ${yearOf(t)} ›</button> ${statusBadge(t)}</h2><p class="sub" style="margin:2px 0 0">${fr(t.start,t.end)} · ${t.overseas?'Overseas':'Local'} · PIC ${esc(t.pic||'not set')}${t.apic?' · A.PIC '+esc(t.apic):''}</p></div></div>
   <div class="fsum"><div><span>Going</span><b>${c.length}</b></div><div><span>Paid in full</span><b>${t.fee?paid+' / '+c.length:'—'}</b></div><div><span>Received</span><b>${rm(f.inn)}</b></div><div><span>Balance</span><b>${rm(f.balance)}</b></div></div>
   ${ns?`<div class="next" style="margin:6px 0">${esc(ns)}</div>`:''}${isCancelled(t)?'':segs(t)}
   ${a.length?`<ul class="alist">${a.map(i=>`<li><span class="dot ${i.sev==='w'?'w':''}"></span><button class="link" data-act="goto" data-id="${t.id}" data-tab="${i.go.tab}" data-f="${i.go.f||'all'}" data-s="${i.go.s??''}">${esc(i.text)}</button></li>`).join('')}</ul>`:''}</div>`}
@@ -825,7 +844,7 @@ function vPeople(){
   const so=S.psort||'name',lt=x=>T(x.h[0].trip).start;
   rows.sort(so==='trips'?(a,b)=>b.h.length-a.h.length||a.r.name.localeCompare(b.r.name):so==='latest'?(a,b)=>lt(b).localeCompare(lt(a))||a.r.name.localeCompare(b.r.name):(a,b)=>a.r.name.localeCompare(b.r.name));
   const lost=DB.regs.filter(r=>!T(r.trip));
-  const lostPanel=lost.length?`<div class="panel" id="unlinked"><h2>Registrations not linked to a trip (${lost.length})</h2><p class="small muted">The form answer didn't match any trip's Google Form choice. Choose the trip for each${can('admin')?', or set the trip\'s Google Form choice in Admin › Trips & form codes so future answers link by themselves':''}.</p><div class="tbl"><table><thead><tr><th>Name</th><th>Destination answered</th><th>Trip</th></tr></thead><tbody>${lost.map(r=>{const any=r.destAnswer&&findTrip(null,r.destAnswer,r.regDate,true);const why=!r.destAnswer?'No destination answer found: choose the form question in Admin › Trips & form codes':any&&!openFor(r.regDate).includes(any)?`Sent ${fd(r.regDate)}, after ${esc(any.dest)} ${yearOf(any)} started or closed`:'No trip matches this answer: set the Google Form choice in Admin';return `<tr><td>${esc(r.name)}<div class="small muted">${why}</div></td><td>${esc(r.destAnswer||'—')}</td><td><select class="inp" data-set="reg|${r.id}|trip" ${can('edit')?'':'disabled'}><option value="">Choose trip</option>${DB.trips.map(t=>`<option value="${t.id}">${esc(t.dest)} ${yearOf(t)}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table></div></div>`:'';
+  const lostPanel=lost.length?`<div class="panel" id="unlinked"><h2>Registrations not linked to a trip (${lost.length})</h2><p class="small muted">The form answer didn't match any trip's Google Form choice. Choose the trip for each${can('admin')?', or set the trip\'s Google Form choice in Admin › Trips & Form Codes so future answers link by themselves':''}.</p><div class="tbl"><table><thead><tr><th>Name</th><th>Destination answered</th><th>Trip</th></tr></thead><tbody>${lost.map(r=>{const any=r.destAnswer&&findTrip(null,r.destAnswer,r.regDate,true);const why=!r.destAnswer?'No destination answer found: choose the form question in Admin › Trips & Form Codes':any&&!openFor(r.regDate).includes(any)?`Sent ${fd(r.regDate)}, after ${esc(any.dest)} ${yearOf(any)} started or closed`:'No trip matches this answer: set the Google Form choice in Admin';return `<tr><td>${esc(r.name)}<div class="small muted">${why}</div></td><td>${esc(r.destAnswer||'—')}</td><td><select class="inp" data-set="reg|${r.id}|trip" ${can('edit')?'':'disabled'}><option value="">Choose trip</option>${DB.trips.map(t=>`<option value="${t.id}">${esc(t.dest)} ${yearOf(t)}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table></div></div>`:'';
   const tripsSorted=DB.trips.slice().sort((a,b)=>b.start.localeCompare(a.start));
   const sel=(k,lab,opts)=>`<select class="inp" data-pf="${k}" aria-label="${lab}">${opts.map(([v,l])=>`<option value="${esc(v)}" ${String(S[k]||'')===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
   return lostPanel+`<div class="pagehead"><div><h1>Participants</h1><p class="sub">Showing ${rows.length} of ${all.length} people with mission trip records</p></div></div>
@@ -841,7 +860,7 @@ function vPeople(){
 }
 
 /* =================== admin =================== */
-const ADM_TABS=[['users','Users'],['trips','Trips & form codes'],['forms','Forms & links'],['data','Data'],['settings','Settings'],['history','Access history']];
+const ADM_TABS=[['users','Users'],['trips','Trips & Form Codes'],['forms','Form & Links'],['data','Data'],['settings','Settings'],['history','Access History']];
 function vAddUser(){return `<div class="sheethead"><h2>Add user</h2><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
   <form class="form" data-form="user"><div><label>User ID <small>used to sign in · no spaces (e.g. mary.tan)</small></label><input name="id" required autocomplete="off" autocapitalize="none" spellcheck="false" data-uid></div><div><label>Name</label><input name="name" required></div><div><label>Email <small>for step reminders</small></label><input name="email" type="email" placeholder="name@example.com"></div>
   <div><label>Role</label><select name="role" data-accrole><option>PIC</option><option>Accounts</option><option>Admin</option></select></div><div><label>Password</label><input name="pw" type="password" minlength="8" required autocomplete="new-password"></div>
@@ -858,8 +877,8 @@ function vAdmin(){
         <div class="u2"><button class="btn sm" data-act="access" data-u="${esc(u.id)}">Access</button><button class="btn sm" data-act="pw" data-u="${esc(u.id)}">Reset password</button>${u.id!==(me()||{}).id?`<button class="link small" style="color:var(--red)" data-act="rmuser" data-u="${esc(u.id)}">Remove</button>`:''}</div></div>`}).join('')}</div>
       <p class="small muted" style="margin:12px 0 0"><b>Admin</b>: everything. <b>Accounts</b>: every trip, import and statistics. <b>PIC</b>: only the trips you assign, <i>Can edit</i> or <i>View only</i>.</p></div>`,
     trips:()=>{const lost=DB.regs.filter(r=>!T(r.trip)).length,F=DB.forms||{},heads=S.formHeads||[],cur=F.destq||S.destQ||'';return `<div class="panel"><h2>How registrations link to trips</h2>
-      <div class="form"><div><label>Form question that holds the destination</label><select class="inp" data-set="linkset|destq">${heads.length?'':'<option value="">Connect the Google Sheet first</option>'}<option value="">Detect automatically${S.destQ&&!F.destq?' (found: '+esc(S.destQ)+')':''}</option>${heads.map(h=>`<option value="${esc(h)}" ${F.destq===h?'selected':''}>${esc(h)}</option>`).join('')}</select></div>
-      <div><label>Which trips can a registration join?</label><select class="inp" data-set="linkset|advanceOnly"><option value="1" ${advOnly()?'selected':''}>Only trips that start after it was sent (recommended)</option><option value="0" ${advOnly()?'':'selected'}>Any open trip</option></select></div></div>
+      <div class="lset"><label for="ls1">Form question that holds the destination</label><select id="ls1" class="inp" data-set="linkset|destq">${heads.length?'':'<option value="">Connect the Google Sheet first</option>'}<option value="">Detect automatically${S.destQ&&!F.destq?' (found: '+esc(S.destQ)+')':''}</option>${heads.map(h=>`<option value="${esc(h)}" ${F.destq===h?'selected':''}>${esc(h)}</option>`).join('')}</select>
+      <label for="ls2">Which trips can a registration join?</label><select id="ls2" class="inp" data-set="linkset|advanceOnly"><option value="1" ${advOnly()?'selected':''}>Only trips that start after it was sent (recommended)</option><option value="0" ${advOnly()?'':'selected'}>Any open trip</option></select></div>
       <p class="small muted" style="margin:8px 0 0">${cur?`Reading the destination from: <b>${esc(cur)}</b>.`:'<span style="color:var(--red)">No destination question found yet. Choose it above.</span>'} Cancelled and closed trips never receive new registrations. Registrations sent on or after a trip's start date stay unlinked so you can check them.</p></div>
       <div class="panel"><h2>Google Form choice for each trip</h2>
       <p class="small">Type each trip's destination <b>exactly as it appears in your Google Form's destination question</b>, e.g. "Batu Pahat, Johor (19–22 Nov 2026)". New form answers are then linked to the right trip by themselves. For more than one wording, separate them with a semicolon (;).</p>
@@ -878,9 +897,14 @@ function vAdmin(){
     settings:()=>`<div class="panel"><h2>Settings</h2><form class="form" data-form="settings"><div class="full"><label>Apps Script web app link</label><input name="backend" type="url" value="${esc(BACKEND_URL||DB.settings.backend)}" ${BACKEND_URL?'readonly':''} placeholder="https://script.google.com/macros/s/.../exec"></div>
       <div class="full"><label>Media archive (main folder) <small>Admin and Accounts only; PICs get their own trip folder link</small></label><input name="driveRoot" type="url" value="${esc(mediaRoot())}" placeholder="https://1drv.ms/f/..."></div><div class="full"><button class="btn pri">Save settings</button></div></form>
       <p class="small muted" style="margin:12px 0 0">App version ${APP_VER}</p></div>`,
-    history:()=>{const L=LL.filter(l=>!S.lf||l.user===S.lf).slice(0,300),showIP=L.some(l=>l.ip&&l.ip!=='unavailable');return `<div class="panel"><div class="stephead"><h2>Access history <span class="small muted" style="font-weight:500">${LL.length} entries</span></h2><div class="row"><select class="inp" style="width:auto" data-lf><option value="">All users</option>${UU.map(u=>`<option ${S.lf===u.id?'selected':''}>${esc(u.id)}</option>`).join('')}</select><button class="btn sm" data-act="logcsv">Export CSV</button></div></div>
+    history:()=>{const day=l=>String(l.t).slice(0,10),q=(S.lq||'').toLowerCase();
+      const L=LL.filter(l=>(!S.lf||l.user===S.lf)&&(!S.lfrom||day(l)>=S.lfrom)&&(!S.lto||day(l)<=S.lto)&&(!q||[l.action,l.target,l.user].join(' ').toLowerCase().includes(q))).slice(0,500),showIP=L.some(l=>l.ip&&l.ip!=='unavailable');
+      return `<details class="panel flow" ${S.histOpen!==false?'open':''} data-hist><summary>Access History <span class="small muted" style="font-weight:500;margin-left:8px">${L.length} of ${LL.length} entries${LL[0]?' · latest '+fdt(LL[0].t):''}</span></summary>
+      <div class="hfil"><select class="inp" data-lf aria-label="User"><option value="">All users</option>${UU.map(u=>`<option ${S.lf===u.id?'selected':''}>${esc(u.id)}</option>`).join('')}</select>
+      <label>From <input class="inp" type="date" value="${esc(S.lfrom||'')}" data-pf="lfrom"></label><label>To <input class="inp" type="date" value="${esc(S.lto||'')}" data-pf="lto"></label>
+      <input class="inp" type="search" placeholder="Search action or record" value="${esc(S.lq||'')}" data-pf="lq">${S.lf||S.lfrom||S.lto||S.lq?'<button class="link small" data-act="lclear">Clear</button>':''}<button class="btn sm" data-act="logcsv">Export CSV</button></div>
       <div class="tbl"><table class="sm"><thead><tr><th>When</th><th>User</th><th>Action</th><th>Record</th>${showIP?'<th>IP address</th>':''}<th>Device</th></tr></thead><tbody>
-      ${L.map(l=>`<tr><td style="white-space:nowrap">${fdt(l.t)}</td><td>${esc(l.user)}</td><td>${/IC/.test(l.action)?`<span class="badge b-amber">${esc(l.action)}</span>`:esc(l.action)}</td><td>${esc(l.target)}</td>${showIP?`<td>${l.ip&&l.ip!=='unavailable'?esc(l.ip):''}</td>`:''}<td>${esc(l.dev)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No activity yet.</td></tr>'}</tbody></table></div></div>`}
+      ${L.map(l=>`<tr><td style="white-space:nowrap">${fdt(l.t)}</td><td>${esc(l.user)}</td><td>${/IC/.test(l.action)?`<span class="badge b-amber">${esc(l.action)}</span>`:esc(l.action)}</td><td>${esc(l.target)}</td>${showIP?`<td>${l.ip&&l.ip!=='unavailable'?esc(l.ip):''}</td>`:''}<td>${esc(l.dev)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No activity matches.</td></tr>'}</tbody></table></div></details>`}
   };
   return `<div class="pagehead"><div><h1>Admin</h1></div></div>
   <div class="subtabs" role="tablist">${ADM_TABS.map(([k,l])=>`<button role="tab" data-act="admtab" data-t="${k}" aria-selected="${tab===k}">${l}</button>`).join('')}</div>
@@ -951,7 +975,7 @@ function mediaBox(t){
   return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
 }
 const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
-const APP_VER='6.3';
+const APP_VER='6.4';
 // User IDs: spaces become dots, other symbols are dropped (e.g. "Mary Tan" → "mary.tan")
 const cleanId=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[.]|[.]$/g,'');
 const regLink=()=>((DB.forms||{}).regform||'').trim();
@@ -1064,7 +1088,7 @@ function tWorkflow(t,s){
 }
 function adminSetup(t){if(!can('all')||isClosed(t)||isCancelled(t))return '';const a=chk(t,'adm_form').done,m=!!(t.media||'').trim();if(a&&m)return '';
   return `<div class="panel adm"><h3>Admin setup for this trip</h3><ul class="check">
-  <li><div class="ci"><label><input type="checkbox" data-set="done|${t.id}|adm_form" ${a?'checked':''}><span>Add "${esc(t.formCode||t.dest)}" to the Google Form's destination choices${t.formCode?'':' <em class="autot">tip: set the exact wording in Admin › Trips & form codes</em>'}</span></label></div></li>
+  <li><div class="ci"><label><input type="checkbox" data-set="done|${t.id}|adm_form" ${a?'checked':''}><span>Add "${esc(t.formCode||t.dest)}" to the Google Form's destination choices${t.formCode?'':' <em class="autot">tip: set the exact wording in Admin › Trips & Form Codes</em>'}</span></label></div></li>
   <li><div class="ci"><label><input type="checkbox" disabled ${m?'checked':''}><span>Create this trip's folder in the media archive and paste its link <em class="autot">ticks when the link is saved</em></span></label></div><div class="bind">${mediaBox(t)}</div></li>
   <li class="small muted" style="padding-left:30px">Then assign the PIC and A.PIC user accounts to this trip in Admin › Users › Access.</li></ul></div>`}
 function getPath(o,path){return path.split('.').reduce((a,k)=>a==null?undefined:a[k],o)}
@@ -1102,6 +1126,18 @@ async function uploadFile(t,key,file,ocr){
     const j=await api('upload',{trip:t.id,kind:key,name:file.name,mime:file.type||'application/octet-stream',data,ocr:!!ocr});
     const p=P(t);p[key]={url:j.url,name:file.name};if(ocr){if(j.text){p.itinText=j.text;S.itxt=t.id}else if(j.ocr==='off')alert('File saved. To read text from photos and PDFs, the admin needs to switch on the Drive service in Apps Script (see the setup notes).')}
     S.up=null;save();render();toast('File saved to Google Drive')}catch(err){S.up=null;render();alert('Upload failed: '+err.message)}}
+/* ---- PDF viewer: shows a form before downloading (pages drawn with PDF.js, works on phones) ---- */
+function vPdf(title){return `<div class="sheethead"><div><h2>${esc(title)}</h2><p class="sub">Preview</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
+  <div class="row" style="margin-bottom:10px"><button class="btn pri sm" data-act="pdfdl">⬇ Download</button><button class="btn sm" data-act="pdftab">Open in new tab</button></div>
+  <div id="pdfv" class="pdfv"><p class="small muted"><span class="spin"></span> Loading…</p></div>`}
+let PDFJS=null;
+function loadPdfJs(){if(PDFJS)return PDFJS;PDFJS=new Promise((ok,no)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';sc.onload=()=>{try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';ok(window.pdfjsLib)}catch(e){no(e)}};sc.onerror=no;document.head.appendChild(sc)});return PDFJS}
+async function showPdf(g){const box=$('#pdfv');if(!box)return;
+  try{const lib=await loadPdfJs(),doc=await lib.getDocument({data:await g.blob.arrayBuffer()}).promise;box.innerHTML='';
+    const w=Math.min(box.clientWidth||700,900);
+    for(let i=1;i<=doc.numPages;i++){const pg=await doc.getPage(i),v1=pg.getViewport({scale:1}),sc=w/v1.width,dpr=Math.min(2,window.devicePixelRatio||1),vp=pg.getViewport({scale:sc*dpr});
+      const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;c.style.width='100%';box.appendChild(c);await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;if(!$('#pdfv'))return}}
+  catch(e){box.innerHTML=`<object data="${URL.createObjectURL(g.blob)}" type="application/pdf" width="100%" height="600"><p class="small">Preview isn't available on this device. Use Download or Open in new tab.</p></object>`}}
 function toast(msg){S.toast=msg;const el=$('#toast');if(el){el.textContent=msg;el.className='toast on'}clearTimeout(S.toastT);S.toastT=setTimeout(()=>{S.toast='';const e=$('#toast');if(e)e.className='toast'},3800)}
 function tPeople(t){
   const F={all:['All',()=>true],unpaid:['Not fully paid',r=>r.status==='Confirmed'&&paidOf(r)<t.fee],noins:['No insurance',r=>r.status==='Confirmed'&&!r.insurer],passport:['Passport issue',r=>passportBad(t,r)],wd:['Withdrawn',r=>r.status==='Withdrawn']};
@@ -1171,10 +1207,12 @@ function tFinance(t){
   const byCat={};f.L.filter(l=>l.dir==='out').forEach(l=>byCat[l.cat]=(byCat[l.cat]||0)+ +l.amount);const max=Math.max(1,...Object.values(byCat));
   const tm=DB.teams[t.id]||[],tnames=[...new Set([...tm.map(g=>(REG(g.treasurer)||{}).name).filter(Boolean),...conf(t).map(r=>r.name)])];
   const TL=tLinks(t).filter(l=>l.active);
-  const link=`<div class="panel"><div class="stephead"><h2 style="margin:0">Treasurer links</h2><span class="small muted">${TL.length} active</span></div>
-   <p class="small muted" style="margin-top:-4px">One link per treasurer. They record money in and out on their phone, even offline, and entries arrive here tagged with their name.</p>
+  const sp=isSplit(t),noLink=conf(t).filter(r=>!TL.some(l=>l.name.toLowerCase()===r.name.toLowerCase()));
+  const link=`<div class="panel"><div class="stephead"><h2 style="margin:0">${sp?'Entry links (treasurers & participants)':'Treasurer links'}</h2><span class="small muted">${TL.length} active</span></div>
+   <p class="small muted" style="margin-top:-4px">${sp?'Give each person their own link. They record what they spend on their phone (even offline) and choose who it was for: just themselves, everyone, or a group.':'One link per treasurer. They record money in and out on their phone, even offline, and entries arrive here tagged with their name.'}</p>
+   ${sp&&ro&&noLink.length&&BE()?`<button class="btn sm" style="margin-bottom:10px" data-act="tlinkall" data-id="${t.id}">Create a link for every participant (${noLink.length})</button>`:''}
    ${!BE()?'<p class="warn">Links work once the app is connected to the Google Sheet.</p>':''}
-   ${TL.length?`<div class="tbl"><table class="sm"><tbody>${TL.map(l=>`<tr><td><b>${esc(l.name)}</b>${(()=>{const g=tm.find(g=>(REG(g.treasurer)||{}).name===l.name);return g?` <span class="muted">${esc(g.name)}</span>`:''})()}</td><td class="small muted">${l.created?fd(l.created):''}</td><td style="text-align:right;white-space:nowrap"><button class="link small" data-act="copy" data-v="${esc(tUrl(t,l.key))}">Copy link</button>${ro?` · <button class="link small" data-act="tlinkoff" data-id="${t.id}" data-k="${l.key}">Turn off</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}
+   ${TL.length?`<div class="tbl"><table class="sm"><tbody>${TL.map(l=>`<tr><td><b>${esc(l.name)}</b>${(()=>{const g=tm.find(g=>(REG(g.treasurer)||{}).name===l.name);return g?` <span class="muted">${esc(g.name)}</span>`:''})()}</td><td class="small muted">${l.created?fd(l.created):''}</td><td style="text-align:right;white-space:nowrap"><button class="link small" data-act="copy" data-v="${esc(tUrl(t,l.key))}">Copy link</button> · <a class="small" href="https://wa.me/${(()=>{const r=regsOf(t).find(r=>r.name.toLowerCase()===l.name.toLowerCase());let m=r&&String(r.mobile||'').replace(/\D/g,'');if(m&&m[0]==='0')m='6'+m;return m||''})()}?text=${encodeURIComponent(`Hi ${l.name}, use this link to record what you spend on ${t.dest} ${yearOf(t)}. It works offline too:\n${tUrl(t,l.key)}`)}" target="_blank" rel="noopener">WhatsApp</a>${ro?` · <button class="link small" data-act="tlinkoff" data-id="${t.id}" data-k="${l.key}">Turn off</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}
    ${ro?`<form class="row" data-form="tlink" data-id="${t.id}" style="margin-top:10px;flex-wrap:nowrap"><input class="inp" name="name" list="tnames-${t.id}" placeholder="Treasurer's name" required><button class="btn sm pri" style="white-space:nowrap">Create link</button></form><datalist id="tnames-${t.id}">${tnames.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`:''}</div>`;
   const closePanel=`<div class="panel"><h2>Close-out</h2>${f.balance>0.009&&ro?`<p class="small">Balance ${rm(f.balance)} left. <button class="btn sm pri" data-act="surplus" data-id="${t.id}">Distribute surplus</button></p>`:''}${closeBox(t)}</div>`;
   return `${forms(['finance'])}${modeSwitch(t)}${f.claims.length?`<div class="warn r">${f.claims.length} personal payment${f.claims.length>1?'s':''} waiting to be claimed. Ask treasurers to pay directly next time so no one uses their own money.</div>`:''}
@@ -1578,16 +1616,18 @@ document.addEventListener('click',async e=>{
     case 'logout':await log('Signed out');ME=null;S.token=null;S.user=null;S.adm=null;SNAP=null;try{sessionStorage.removeItem('towmt-me');sessionStorage.removeItem('towmt-sess');localStorage.removeItem('towmt-sess')}catch(x){}if(BE())DB=Object.assign(emptyDB(),{settings:DB.settings});render();break;
     case 'view':if(d.v==='admin')S.adm=null;go({view:d.v,trip:null,f:'all'});break;
     case 'year':S.ovTrip=null;go({year:+d.y,view:'overview',trip:null});break;
-    case 'trip':go({trip:d.id,tab:'workflow',stage:null,f:'all'});break;
+    case 'trip':S.cameFrom=S.view;go({trip:d.id,tab:'workflow',stage:null,f:'all'});break;
     case 'goto':go({trip:d.id,tab:d.tab,f:d.f||'all',stage:d.s!==''?+d.s:null});break;
-    case 'back':go({trip:null,view:'trips'});break;
-    case 'ovsel':S.ovTrip=d.id;S.view='overview';S.trip=null;render();{const el=$('.ovd');if(el&&innerWidth<900)el.scrollIntoView({behavior:'smooth',block:'start'})}break;
+    case 'back':if(history.length>1&&history.state&&history.state.app&&S.cameFrom)history.back();else go({trip:null,view:'trips'});break;
+    case 'ovsel':S.ovTrip=d.id;S.view='overview';S.trip=null;pushNav();render();{const el=$('.ovd');if(el&&innerWidth<900)el.scrollIntoView({behavior:'smooth',block:'start'})}break;
     case 'attnall':S.attnAll=!S.attnAll;render();break;
     case 'archmodal':modal(vArch(),true);break;
     case 'acct':S.acct=!S.acct;render();break;
-    case 'admtab':S.admTab=d.t;render();break;
+    case 'admtab':S.admTab=d.t;pushNav();render();break;
     case 'adduser':modal(vAddUser(),true);break;
+    case 'lclear':Object.assign(S,{lf:'',lfrom:'',lto:'',lq:''});render();break;
     case 'pclear':Object.assign(S,{q:'',py:'',pt:'',ps:'',pr:false});render();break;
+    case 'tlinkall':{const t=T(d.id);conf(t).forEach(r=>{if(tLinks(t).some(l=>l.active&&l.name.toLowerCase()===r.name.toLowerCase()))return;const a=new Uint8Array(12);crypto.getRandomValues(a);tLinks(t).push({key:[...a].map(x=>x.toString(16).padStart(2,'0')).join(''),name:r.name,active:true,created:TODAY.toISOString().slice(0,10)})});save();log('Created entry links for everyone',t.id);render();toast('Links created. Send each person theirs with the WhatsApp button.');break}
     case 'finmode':{const t=T(d.id);if(!can('edit'))break;const on=d.m==='split';if(on===isSplit(t))break;if(!on&&DB.ledger.some(l=>l.trip===t.id&&spFor(l))&&!confirm('Switch back to Team pool? Expenses marked for selected people will be shared by everyone again (the markings are kept if you switch back).'))break;P(t).split=on;save();log('Finance mode',`${t.dest}: ${on?'Split per person':'Team pool'}`);render();toast(on?'Split per person is on. Choose "Who is this for?" when adding expenses.':'Back to Team pool.');break}
     case 'forall':{const fm=b.closest('form');fm.querySelector('.forlist').hidden=true;fm.querySelectorAll('[data-act=forall],[data-act=forsome]').forEach(x=>x.setAttribute('aria-pressed',x===b));break}
     case 'forsome':{const fm=b.closest('form');fm.querySelector('.forlist').hidden=false;fm.querySelectorAll('[data-act=forall],[data-act=forsome]').forEach(x=>x.setAttribute('aria-pressed',x===b));break}
@@ -1595,7 +1635,7 @@ document.addEventListener('click',async e=>{
     case 'splitrefund':{const t=T(d.id),k=splitCalc(t),m={};k.rows.forEach(x=>m[x.r.id]=Math.max(0,x.bal));modal(vSurplus(t,m),true);break}
     case 'eye':{const i=$('#lp'),sh=i.type==='password';i.type=sh?'text':'password';b.setAttribute('aria-label',sh?'Hide password':'Show password');b.classList.toggle('on',sh);i.focus();break}
     case 'stage':S.stage=+d.s;S.tab='workflow';render();break;
-    case 'tab':S.tab=d.t;S.f='all';render();break;
+    case 'tab':S.tab=d.t;S.f='all';pushNav();render();break;
     case 'filter':S.f=d.f;render();break;
     case 'profile':closeModal();modal(vProfile(d.id));{const r=REG(d.id);log('Opened profile',`${r.name} (${T(r.trip).dest} ${yearOf(T(r.trip))})`)}break;
     case 'goteams':closeModal();go({trip:d.id,tab:'teams'});break;
@@ -1619,10 +1659,12 @@ document.addEventListener('click',async e=>{
     case 'delreg':if(can('admin'))modal(vDelReg(d.id),true);break;
     case 'rmk':S.rmk=S.trip+'|'+d.k;render();{const i=$('[data-rmk]');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}break;
     case 'form':{const f=FORMS[d.f],own=(DB.forms||{})[d.f];if(own&&!d.std){window.open(own,'_blank','noopener');log('Opened form',f.title);break}
-      const got=await getForm(d.f);
+      modal(vPdf(f.title,''),true);
+      const got=await getForm(d.f);if(!got){closeModal()}
       if(!got){alert(`${f.title} wasn't found in the forms folder on GitHub. Check that the folder is called "forms", sits next to index.html, and has a PDF with "${FORM_HINT[d.f]}" in its name. GitHub can take 1–2 minutes to show new uploads.`);break}
-      const a=document.createElement('a');a.href=URL.createObjectURL(got.blob);a.download=got.name;document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);
-      log('Downloaded form',f.title);break}
+      S.pdf=got;showPdf(got);log('Viewed form',f.title);break}
+    case 'pdfdl':{const g=S.pdf;if(!g)break;const a=document.createElement('a');a.href=URL.createObjectURL(g.blob);a.download=g.name;document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),500);log('Downloaded form',g.name);break}
+    case 'pdftab':{const g=S.pdf;if(g)window.open(URL.createObjectURL(g.blob),'_blank','noopener');break}
     case 'scanforms':S.formScan={busy:1};render();try{sessionStorage.removeItem('towmt-formmap')}catch(x){}S.formScan=await scanForms(true);render();break;
     case 'printwf':printWorkflow(T(d.id));break;
     case 'printmeals':printMeals(T(d.id));break;
