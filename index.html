@@ -372,6 +372,60 @@ tr.cancel td{color:var(--muted)}
   .tc2 b{font-size:15px}
   .bind{margin-left:0}
 }
+
+/* v6.1 header */
+.brand span{white-space:nowrap}
+.acct{position:relative;display:flex;align-items:center;gap:10px;margin-left:8px}
+.sdot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}.sdot.ok{background:var(--green)}.sdot.err{background:var(--red)}
+.avatar{width:36px;height:36px;border-radius:50%;border:0;background:var(--ol);color:#fff;font-weight:800;font-size:13px;letter-spacing:.02em}
+.amenu{position:absolute;right:0;top:46px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.12);min-width:230px;z-index:20;padding:6px 0;overflow:hidden}
+.am1{padding:10px 14px 8px;border-bottom:1px solid var(--line)}.am1 b{display:block}.am1 span{font-size:12.5px;color:var(--muted)}
+.amenu .sync{display:block;width:100%;text-align:left;background:none;border:0;padding:8px 14px 2px;font-size:13px;font-weight:600;color:var(--muted)}.amenu .sync.ok{color:var(--green)}.amenu .sync.err{color:var(--red);text-decoration:underline}
+.amitem{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:11px 14px;font-weight:700;color:var(--ol-ink)}
+.amitem:hover{background:var(--sunk)}
+/* v6.1 overview */
+.ysel{width:auto;font-weight:700}
+.hbars{display:flex;flex-direction:column;gap:4px}
+.hbar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 70px;gap:10px;align-items:center;background:none;border:1px solid transparent;border-radius:10px;padding:7px 8px;text-align:left;width:100%}
+.hbar:hover{background:var(--sunk)}.hbar.on{border-color:var(--ol);background:var(--ol-soft)}
+.hl b{display:block;font-size:14px;line-height:1.25}.hl i,.hv i{font-style:normal;font-size:12px;color:var(--muted)}
+.ht{height:12px;background:var(--sunk);border-radius:6px;overflow:hidden}.hf{display:block;height:100%;background:var(--ol);border-radius:6px}
+.hbar.cx .hl b{text-decoration:line-through;color:var(--muted)}
+.hv{text-align:right;font-weight:800}
+.ovd h2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.alist{list-style:none;padding:0;margin:10px 0 0}.alist li{display:flex;gap:8px;padding:3px 0;font-size:13.5px}
+.yb.sel rect.live,.yb.sel rect.plan,.yb.sel rect.arch{stroke:var(--ink);stroke-width:2}
+.yb:hover rect.live{opacity:.8}
+/* v6.1 participants */
+.ptools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:-6px 0 14px}
+.ptools .search{flex:1 1 220px;max-width:340px}.ptools select{width:auto;max-width:220px}
+.chk{display:flex;gap:6px;align-items:center;font-size:13.5px;font-weight:600}.chk input{width:16px;height:16px;accent-color:var(--ol)}
+/* v6.1 admin */
+.ulist,.tlist,.flist{display:flex;flex-direction:column}
+.urow,.trow,.frow{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.urow:first-child,.trow:first-child,.frow:first-child{border-top:0}
+.u1{flex:1 1 300px;min-width:0}.u2{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.trow .t1{flex:1 1 220px}.trow .inp{flex:2 1 280px}
+.frow>div{flex:1 1 220px}.frow .inp{flex:2 1 280px}
+@media (max-width:640px){
+  .top .wrap{gap:8px}.brand img{height:28px}.brand{font-size:15px}.acct{margin-left:auto}
+  .hbar{grid-template-columns:1fr 54px;grid-template-areas:"l v" "t t";row-gap:5px}
+  .hl{grid-area:l}.hv{grid-area:v}.ht{grid-area:t}
+  .ptable .hm{display:none}
+  .ptools select{flex:1 1 45%;max-width:none}
+}
+
+/* v6.3 split mode */
+.modep{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:8px 14px;font-weight:700;color:var(--muted)}.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ol);color:#fff}.seg.sm button{padding:6px 10px;font-size:13px}
+.forbox .forlist{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.forbox .forlist .row{flex-basis:100%}
+/* v6.3 overview */
+.achips{display:flex;flex-wrap:wrap;gap:6px;margin:-6px 0 16px}
+.achip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:600}
+.achip .dot{margin-top:0}.achip[aria-pressed="true"]{border-color:var(--ol);background:var(--ol-soft)}
 </style>
 </head>
 <body>
@@ -526,7 +580,7 @@ async function flush(){
   catch(e){Q.unshift(...ops);setSync('Not saved. Tap to retry','err')}
   flushing=false;if(Q.length&&!/Not saved/.test(S.sync))flush();
 }
-function setSync(text,cls){S.sync=text;S.syncCls=cls;const el=$('#sync');if(el){el.textContent=text;el.className='sync '+(cls||'')}}
+function setSync(text,cls){S.sync=text;S.syncCls=cls;const el=$('#sync');if(el){el.textContent=text;el.className='sync '+(cls||'')}const d=$('.sdot');if(d){d.className='sdot '+(cls||'');d.title=text}}
 async function api(action,payload){
   const r=await fetch(BE(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,token:S.token},payload||{}))});
   const j=await r.json();
@@ -539,13 +593,13 @@ async function loadRemote(pre){
   const keep=DB.settings;DB=emptyDB();DB.settings=keep;
   DB.trips=j.trips.map(t=>Object.assign(t,{contacts:pj(t.contacts,[]),budget:pj(t.budget,[]),tLinks:pj(t.tLinks,[]),plan:pj(t.plan,{}),id:String(t.id),overseas:t.overseas===true||/^(true|yes|1)$/i.test(String(t.overseas)),fee:+t.fee||0,deposit:+t.deposit||0,mealAllow:+t.mealAllow||0}));
   DB.regs=j.regs.map(r=>fixNames(Object.assign(r,{status:r.status||'Confirmed'})));
-  DB.ledger=j.ledger.map(l=>Object.assign(l,{amount:+l.amount||0}));
+  DB.ledger=j.ledger.map(l=>Object.assign(l,{amount:+l.amount||0,split:(()=>{const a=pj(l.split,null);return Array.isArray(a)?a:''})()}));
   DB.withdrawals=j.withdrawals;DB.archive=j.archive.map(a=>Object.assign(a,{y:+a.y}));
   j.reports.forEach(r=>{const o=Object.assign({},r);delete o.trip;DB.reports[r.trip]=o});
   j.workflow.forEach(w=>{DB.check[w.trip]=pj(w.check,{});DB.due[w.trip]=pj(w.due,{})});
   j.teams.forEach(x=>DB.teams[x.trip]=pj(x.teams,[]));normTeams();
   (j.settings||[]).forEach(x=>{if(x.key==='forms')DB.forms=pj(x.value,{});if(x.key==='private')DB.priv=pj(x.value,{})});
-  S.sheetUrl=j.sheetUrl||S.sheetUrl||'';if(can('all')&&j.sheetUrl){DB.forms=DB.forms||{};if(DB.forms.appUrl!==appUrl()){DB.forms.appUrl=appUrl();setTimeout(save,500)}}
+  S.sheetUrl=j.sheetUrl||S.sheetUrl||'';S.formHeads=j.formHeads||S.formHeads||[];S.destQ=j.destQ||'';if(can('all')&&j.sheetUrl){DB.forms=DB.forms||{};if(DB.forms.appUrl!==appUrl()){DB.forms.appUrl=appUrl();setTimeout(save,500)}}
   if(j.me){S.user=Object.assign({},S.user,j.me);try{['sessionStorage','localStorage'].forEach(k=>{const st=window[k],o=JSON.parse(st.getItem('towmt-sess')||'null');if(o){o.user=S.user;st.setItem('towmt-sess',JSON.stringify(o))}})}catch(e){}}
   SNAP=ents(DB);setSync('Live from Google Sheet','ok');
   if(autoLink())save();
@@ -684,11 +738,11 @@ function renderInner(){
   if(BE()&&S.view==='admin'&&!S.trip&&!S.adm&&can('admin')){S.adm={users:[],logs:[],loading:1};api('admin').then(j=>{S.adm=j;render()}).catch(e=>{S.adm={users:[],logs:[],err:e.message};render()})}
   const u=me();
   root.innerHTML=`<header class="top"><div class="wrap">
-    <div class="brand"><img src="${LOGO_MARK}" alt="">TOW Missions Trip</div>
-    <nav class="tabs" aria-label="Main">${[['overview','Overview'],['trips','Trips'],['people','Participants'],...(can('all')?[['stats','Statistics']]:[]),...(can('admin')?[['admin','Admin']]:[])].map(([v,l])=>`<button data-act="view" data-v="${v}" aria-current="${(S.trip?'trips':S.view)===v?'page':'false'}">${l}</button>`).join('')}</nav>
-    <div class="who"><button id="sync" class="sync ${S.syncCls}" data-act="retry">${esc(S.sync)}</button> ${esc(u.name)} (${esc(roleLabel(u))})<button data-act="logout" title="App version ${APP_VER}">Sign out</button></div>
+    <div class="brand"><img src="${LOGO_MARK}" alt=""><span>TOW Missions Trip</span></div>
+    <nav class="tabs" aria-label="Main">${[['overview','Overview'],['trips','Trips'],['people','Participants'],...(can('admin')?[['admin','Admin']]:[])].map(([v,l])=>`<button data-act="view" data-v="${v}" aria-current="${(S.trip?'trips':S.view)===v?'page':'false'}">${l}</button>`).join('')}</nav>
+    ${acctMenu(u)}
   </div></header><main><div class="wrap" id="app"></div></main>`;
-  $('#app').innerHTML=S.trip&&T(S.trip)?vTrip(T(S.trip)):({overview:vOverview,trips:vTrips,people:vPeople,stats:can('all')?vStats:vOverview,admin:vAdmin}[S.view]||vOverview)();
+  $('#app').innerHTML=S.trip&&T(S.trip)?vTrip(T(S.trip)):({overview:vOverview,trips:vTrips,people:vPeople,stats:vOverview,admin:vAdmin}[S.view]||vOverview)();
   requestAnimationFrame(()=>{const f=document.querySelector('.track .fill');if(f)f.style.width=f.dataset.w});
 }
 
@@ -713,24 +767,126 @@ function vSetup(){return `<div class="login"><div class="card">
   <button class="btn pri" style="width:100%;justify-content:center;margin-top:14px">Create account</button></form>
   <div class="demo">You can add more users with their own passwords under Admin.</div></div></div>`}
 
-/* =================== overview =================== */
+/* =================== overview (overview + statistics together) =================== */
 function vOverview(){
-  const all=DB.trips.filter(t=>yearOf(t)===S.year).sort((a,b)=>a.start<b.start?-1:1),ts=all.filter(t=>!isCancelled(t)),nc=all.length-ts.length;
-  const pax=new Set(ts.flatMap(t=>conf(t).map(r=>r.ic||r.name))).size,seats=ts.reduce((a,t)=>a+conf(t).length,0);
-  const funds=ts.reduce((a,t)=>a+finance(t).inn,0),dests=[...new Set(ts.map(t=>t.dest))];
-  const dist=t=>{const a=new Date(t.start),z=new Date(t.end);return TODAY<a?a-TODAY:TODAY>z?TODAY-z:0};
-  const groups=DB.trips.filter(t=>!isClosed(t)&&!isCancelled(t)).map(t=>({t,a:attention(t).sort((x,y)=>(x.sev==='r'?0:1)-(y.sev==='r'?0:1))})).filter(x=>x.a.length).sort((x,y)=>dist(x.t)-dist(y.t));
-  return `<div class="pagehead"><div><h1>Missions in ${S.year}</h1><p class="sub">${all.length} planned trip${all.length!==1?'s':''}${nc?` (${nc} cancelled)`:''}${dests.length?': '+esc(dests.join(', ')):''}</p></div>
-    <div class="row" role="group" aria-label="Year">${can('all')&&S.sheetUrl?`<a class="btn sm" href="${esc(S.sheetUrl)}" target="_blank" rel="noopener">Open Google Sheet ↗</a>`:''}${years().slice(0,5).reverse().map(y=>`<button class="chip" data-act="year" data-y="${y}" aria-pressed="${y===S.year}">${y}</button>`).join('')}</div></div>
-  ${all.length?`<div class="tcards">${all.map(tripCard).join('')}</div>
-  <div class="ytot"><b>${can('all')?'All':'Your'} ${S.year} trips together</b><span>${ts.length} trip${ts.length!==1?'s':''}</span><span>${pax} people (${seats} seats)</span><span>${rm(funds)} received</span><span>${dests.filter(d=>ts.find(t=>t.dest===d).overseas).length} overseas · ${dests.filter(d=>!ts.find(t=>t.dest===d).overseas).length} local</span></div>`:`<div class="panel"><p class="empty">No trips for ${S.year} yet.${can('all')?' <button class="link" data-act="newtrip">Add a trip</button> or <button class="link" data-act="importmodal">import from Excel</button>':''}</p></div>`}
+  const all=DB.trips.filter(t=>yearOf(t)===S.year).sort((a,b)=>a.start<b.start?-1:1),ts=all.filter(t=>!isCancelled(t));
+  const pax=new Set(ts.flatMap(t=>conf(t).map(r=>r.ic||r.name))).size,seats=ts.reduce((a,t)=>a+conf(t).length,0),funds=ts.reduce((a,t)=>a+finance(t).inn,0);
+  const ov=ts.filter(t=>t.overseas).length;
+  const pick=all.find(t=>t.id===S.ovTrip)||ts.find(t=>new Date(t.end)>=TODAY)||all[all.length-1];
+  const max=Math.max(1,...all.map(t=>conf(t).length));
+  const ys=years();
+  return `<div class="pagehead"><div><h1>Overview</h1><p class="sub">${ts.length} trip${ts.length!==1?'s':''} in ${S.year} · ${pax} people · ${rm(funds)} received · ${ov} overseas, ${ts.length-ov} local</p></div>
+    <div class="row">${can('all')&&S.sheetUrl?`<a class="btn sm" href="${esc(S.sheetUrl)}" target="_blank" rel="noopener">Open Google Sheet ↗</a>`:''}<select class="inp ysel" data-pf="year" aria-label="Year">${ys.map(y=>`<option ${y===S.year?'selected':''}>${y}</option>`).join('')}</select></div></div>
+  ${attnChips(pick)}
   <div class="grid2"><div class="stack">
-    <div class="panel"><h2>People sent each year</h2>${chart()}</div>
-  </div><div class="stack">
-    <div class="panel"><h2>Needs attention</h2><p class="attnote">Every trip that is not yet closed, nearest to today first, including past trips still waiting to close. <span style="color:var(--red)">●</span> action needed now &nbsp; <span style="color:var(--ol)">●</span> next step.</p>${DB.regs.some(r=>!T(r.trip))?`<div class="att"><h3>Registrations</h3><ul><li><span class="dot"></span><button class="link" data-act="view" data-v="people">${DB.regs.filter(r=>!T(r.trip)).length} new form responses not linked to a trip</button></li></ul></div>`:''}${groups.length||DB.regs.some(r=>!T(r.trip))?groups.map(({t,a})=>`<div class="att"><h3>${esc(t.dest)} ${yearOf(t)} <span class="badge b-grey">${fd(t.start)}</span></h3><ul>${a.map(i=>`<li><span class="dot ${i.sev==='w'?'w':''}"></span><button class="link" data-act="goto" data-id="${t.id}" data-tab="${i.go.tab}" data-f="${i.go.f||'all'}" data-s="${i.go.s??''}">${esc(i.text)}</button></li>`).join('')}</ul></div>`).join(''):'<p class="muted">Nothing outstanding.</p>'}</div>
-    <div class="panel"><h2>Most-visited destinations</h2>${topDest()}</div>
-  </div></div>`;
+    <div class="panel"><div class="stephead"><h2>Trips in ${S.year}</h2><span class="small muted">Bar = people going. Tap a trip.</span></div>
+    ${all.length?`<div class="hbars">${all.map(t=>{const n=conf(t).length,c=isCancelled(t);return `<button class="hbar ${t===pick?'on':''} ${c?'cx':''}" data-act="ovsel" data-id="${t.id}" aria-pressed="${t===pick}"><span class="hl"><b>${esc(t.dest)}</b><i>${fr(t.start,t.end)}${c?' · cancelled':''}</i></span><span class="ht"><span class="hf" style="width:${c?0:Math.max(2,n/max*100)}%"></span></span><span class="hv">${n} <i>going</i></span></button>`}).join('')}</div>`:`<p class="empty">No trips for ${S.year} yet.${can('all')?' <button class="link" data-act="newtrip">Add a trip</button>':''}</p>`}</div>
+  </div><div class="stack">${pick?ovDetail(pick):'<div class="panel"><p class="empty">Choose a trip to see its details.</p></div>'}</div></div>
+  <details class="panel flow" ${S.yrsOpen?'open':''} data-yrs><summary>All years: people sent, totals and top destinations</summary>
+    <div class="grid2" style="margin-top:12px"><div>${chart()}${can('all')?'<button class="link small" data-act="archmodal">+ Add past-year totals</button>':''}</div><div>${yearTable()}<h3 style="font-size:13px;margin:14px 0 6px">Most-visited destinations</h3>${topDest()}</div></div></details>`;
 }
+function ovDetail(t){const f=finance(t),c=conf(t),paid=c.filter(r=>t.fee&&paidOf(r)>=t.fee).length,a=attention(t).slice(0,5),ns=isCancelled(t)?'':nextStep(t);
+  return `<div class="panel ovd"><div class="stephead"><div><h2>${esc(t.dest)} ${yearOf(t)} ${statusBadge(t)}</h2><p class="sub" style="margin:2px 0 0">${fr(t.start,t.end)} · ${t.overseas?'Overseas':'Local'} · PIC ${esc(t.pic||'not set')}${t.apic?' · A.PIC '+esc(t.apic):''}</p></div><button class="btn pri sm" data-act="trip" data-id="${t.id}">Open trip ›</button></div>
+  <div class="fsum"><div><span>Going</span><b>${c.length}</b></div><div><span>Paid in full</span><b>${t.fee?paid+' / '+c.length:'—'}</b></div><div><span>Received</span><b>${rm(f.inn)}</b></div><div><span>Balance</span><b>${rm(f.balance)}</b></div></div>
+  ${ns?`<div class="next" style="margin:6px 0">${esc(ns)}</div>`:''}${isCancelled(t)?'':segs(t)}
+  ${a.length?`<ul class="alist">${a.map(i=>`<li><span class="dot ${i.sev==='w'?'w':''}"></span><button class="link" data-act="goto" data-id="${t.id}" data-tab="${i.go.tab}" data-f="${i.go.f||'all'}" data-s="${i.go.s??''}">${esc(i.text)}</button></li>`).join('')}</ul>`:''}</div>`}
+function attnChips(pick){const lost=DB.regs.filter(r=>!T(r.trip)).length;
+  const g=DB.trips.filter(t=>!isClosed(t)&&!isCancelled(t)).map(t=>({t,a:attention(t)})).filter(x=>x.a.length).sort((x,y)=>x.t.start.localeCompare(y.t.start));
+  if(!g.length&&!lost)return '';
+  return `<div class="achips"><span class="small muted" style="align-self:center">Needs attention:</span>${lost?`<button class="achip" data-act="view" data-v="people"><span class="dot"></span>${lost} unlinked registration${lost>1?'s':''}</button>`:''}${g.map(({t,a})=>{const red=a.filter(i=>i.sev==='r').length;return `<button class="achip" data-act="ovsel" data-id="${t.id}" aria-pressed="${t===pick}"><span class="dot ${red?'':'w'}"></span>${esc(t.dest)} ${yearOf(t)} · ${a.length}</button>`}).join('')}</div>`}
+function attnList(){const dist=t=>{const a=new Date(t.start),z=new Date(t.end);return TODAY<a?a-TODAY:TODAY>z?TODAY-z:0};
+  const lost=DB.regs.filter(r=>!T(r.trip)).length;
+  const g=DB.trips.filter(t=>!isClosed(t)&&!isCancelled(t)).map(t=>({t,a:attention(t).sort((x,y)=>(x.sev==='r'?0:1)-(y.sev==='r'?0:1))})).filter(x=>x.a.length).sort((x,y)=>dist(x.t)-dist(y.t));
+  const open=S.attnAll?g:g.slice(0,4);
+  return (lost?`<div class="att"><ul><li><span class="dot"></span><button class="link" data-act="view" data-v="people">${lost} new form response${lost>1?'s':''} not linked to a trip</button></li></ul></div>`:'')+
+  (open.map(({t,a})=>`<div class="att"><h3><button class="link" data-act="ovsel" data-id="${t.id}">${esc(t.dest)} ${yearOf(t)}</button> <span class="badge b-grey">${fd(t.start)}</span></h3><ul>${a.slice(0,3).map(i=>`<li><span class="dot ${i.sev==='w'?'w':''}"></span><button class="link" data-act="goto" data-id="${t.id}" data-tab="${i.go.tab}" data-f="${i.go.f||'all'}" data-s="${i.go.s??''}">${esc(i.text)}</button></li>`).join('')}${a.length>3?`<li class="small muted" style="padding-left:18px">+${a.length-3} more in the trip</li>`:''}</ul></div>`).join('')||(lost?'':'<p class="muted">Nothing outstanding.</p>'))+
+  (g.length>4?`<button class="link small" data-act="attnall">${S.attnAll?'Show fewer':'Show all '+g.length+' trips'}</button>`:'')}
+function yearTable(){const rows=yearRows().reverse();return `<div class="tbl"><table class="sm"><thead><tr><th>Year</th><th class="num">Trips</th><th class="num">People</th><th>Destinations</th><th class="num">Funds</th></tr></thead><tbody>${rows.map(r=>`<tr><td><button class="link" data-act="year" data-y="${r.y}">${r.y}</button>${r.kind==='arch'?' <span class="badge b-grey">totals</span>':''}</td><td class="num">${r.trips}</td><td class="num">${r.pax}</td><td>${esc(r.dest)}</td><td class="num">${r.funds?rm(r.funds):'—'}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No data yet.</td></tr>'}</tbody></table></div>`}
+function vArch(){return `<div class="sheethead"><h2>Add a past year (totals only)</h2><button class="x" data-act="closebtn" aria-label="Close">×</button></div><p class="small muted">For years where only the totals are known. Saving a year that already exists replaces it.</p><form class="form" data-form="arch">
+   <div><label>Year</label><input name="y" type="number" min="2000" max="2100" required></div><div><label>Trips</label><input name="trips" type="number" min="0" required></div>
+   <div><label>People sent</label><input name="pax" type="number" min="0" required></div><div><label>Funds (RM)</label><input name="funds" type="number" min="0"></div>
+   <div class="full"><label>Destinations</label><input name="dest" placeholder="Sabah, Cambodia"></div><div class="full"><button class="btn pri">Save year</button></div></form>`}
+
+/* =================== header account menu =================== */
+function acctMenu(u){const ini=String(u.name||u.id||'?').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return `<div class="acct"><span class="sdot ${S.syncCls}" title="${esc(S.sync)}" aria-hidden="true"></span><button class="avatar" data-act="acct" aria-expanded="${!!S.acct}" aria-label="Account menu">${esc(ini)}</button>
+  ${S.acct?`<div class="amenu" role="menu"><div class="am1"><b>${esc(u.name)}</b><span>${esc(roleLabel(u))} · ${esc(u.id)}</span></div><button id="sync" class="sync ${S.syncCls}" data-act="retry">${esc(S.sync||'Saved')}</button><div class="small muted" style="padding:4px 14px 8px">App version ${APP_VER}</div><button class="amitem" data-act="logout">Sign out</button></div>`:''}</div>`}
+
+/* =================== participants directory =================== */
+function vPeople(){
+  const map={};DB.regs.forEach(r=>{(map[pkey(r)]=map[pkey(r)]||[]).push(r)});
+  let all=Object.values(map).map(rs=>({r:rs[0],h:tripHistory(rs[0])})).filter(x=>x.h.length),rows=all;
+  const q=(S.q||'').toLowerCase();
+  if(q)rows=rows.filter(x=>x.r.name.toLowerCase().includes(q)||String(x.r.mobile||'').includes(q));
+  if(S.py)rows=rows.filter(x=>x.h.some(h=>String(yearOf(T(h.trip)))===S.py));
+  if(S.pt)rows=rows.filter(x=>x.h.some(h=>h.trip===S.pt));
+  if(S.ps)rows=rows.filter(x=>String(x.r.service||'').toLowerCase().includes(S.ps));
+  if(S.pr)rows=rows.filter(x=>x.h.length>=3);
+  const so=S.psort||'name',lt=x=>T(x.h[0].trip).start;
+  rows.sort(so==='trips'?(a,b)=>b.h.length-a.h.length||a.r.name.localeCompare(b.r.name):so==='latest'?(a,b)=>lt(b).localeCompare(lt(a))||a.r.name.localeCompare(b.r.name):(a,b)=>a.r.name.localeCompare(b.r.name));
+  const lost=DB.regs.filter(r=>!T(r.trip));
+  const lostPanel=lost.length?`<div class="panel" id="unlinked"><h2>Registrations not linked to a trip (${lost.length})</h2><p class="small muted">The form answer didn't match any trip's Google Form choice. Choose the trip for each${can('admin')?', or set the trip\'s Google Form choice in Admin › Trips & form codes so future answers link by themselves':''}.</p><div class="tbl"><table><thead><tr><th>Name</th><th>Destination answered</th><th>Trip</th></tr></thead><tbody>${lost.map(r=>{const any=r.destAnswer&&findTrip(null,r.destAnswer,r.regDate,true);const why=!r.destAnswer?'No destination answer found: choose the form question in Admin › Trips & form codes':any&&!openFor(r.regDate).includes(any)?`Sent ${fd(r.regDate)}, after ${esc(any.dest)} ${yearOf(any)} started or closed`:'No trip matches this answer: set the Google Form choice in Admin';return `<tr><td>${esc(r.name)}<div class="small muted">${why}</div></td><td>${esc(r.destAnswer||'—')}</td><td><select class="inp" data-set="reg|${r.id}|trip" ${can('edit')?'':'disabled'}><option value="">Choose trip</option>${DB.trips.map(t=>`<option value="${t.id}">${esc(t.dest)} ${yearOf(t)}</option>`).join('')}</select></td></tr>`}).join('')}</tbody></table></div></div>`:'';
+  const tripsSorted=DB.trips.slice().sort((a,b)=>b.start.localeCompare(a.start));
+  const sel=(k,lab,opts)=>`<select class="inp" data-pf="${k}" aria-label="${lab}">${opts.map(([v,l])=>`<option value="${esc(v)}" ${String(S[k]||'')===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  return lostPanel+`<div class="pagehead"><div><h1>Participants</h1><p class="sub">Showing ${rows.length} of ${all.length} people with mission trip records</p></div></div>
+  <div class="ptools"><input class="inp search" type="search" placeholder="Search name or mobile" value="${esc(S.q)}" data-q aria-label="Search participants">
+    ${sel('py','Year',[['','All years'],...years().map(y=>[String(y),String(y)])])}
+    ${sel('pt','Trip',[['','All trips'],...tripsSorted.map(t=>[t.id,`${t.dest} ${yearOf(t)}`])])}
+    ${sel('ps','Service',[['','Any service'],['english','English Service'],['chinese','Chinese Service']])}
+    ${sel('psort','Sort',[['name','Sort: Name A–Z'],['trips','Sort: Most trips'],['latest','Sort: Latest trip']])}
+    <label class="chk"><input type="checkbox" data-pf="pr" ${S.pr?'checked':''}> Regulars (3+ trips)</label>${q||S.py||S.pt||S.ps||S.pr?'<button class="link small" data-act="pclear">Clear</button>':''}</div>
+  <div class="panel"><div class="tbl"><table class="ptable"><thead><tr><th>Name</th><th class="hm">IC</th><th class="hm">Service</th><th class="num">Trips</th><th>Mission history, most recent first</th></tr></thead><tbody>
+  ${rows.map(x=>`<tr><td><button class="link" data-act="profile" data-id="${x.h[0].id}">${esc(x.r.name)}</button> ${x.h.length>=3?'<span class="badge b-ol">Regular</span>':''}</td><td class="mask hm">${maskIC(x.r.ic)}</td><td class="hm">${esc(x.r.service)}</td><td class="num">${x.h.length}</td><td>${tchips(x.h)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No one matches these filters.</td></tr>'}
+  </tbody></table></div></div>`;
+}
+
+/* =================== admin =================== */
+const ADM_TABS=[['users','Users'],['trips','Trips & form codes'],['forms','Forms & links'],['data','Data'],['settings','Settings'],['history','Access history']];
+function vAddUser(){return `<div class="sheethead"><h2>Add user</h2><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
+  <form class="form" data-form="user"><div><label>User ID <small>used to sign in · no spaces (e.g. mary.tan)</small></label><input name="id" required autocomplete="off" autocapitalize="none" spellcheck="false" data-uid></div><div><label>Name</label><input name="name" required></div><div><label>Email <small>for step reminders</small></label><input name="email" type="email" placeholder="name@example.com"></div>
+  <div><label>Role</label><select name="role" data-accrole><option>PIC</option><option>Accounts</option><option>Admin</option></select></div><div><label>Password</label><input name="pw" type="password" minlength="8" required autocomplete="new-password"></div>
+  <div class="full" data-acctrips><label>Trips this PIC can see <small>tick one or more</small></label>${tripPicker(new Set(),'')}
+  <label style="margin-top:10px">PIC access</label><select name="access" style="max-width:220px"><option value="Edit">Can edit</option><option value="View">View only</option></select></div>
+  <p class="small muted full" data-accnote hidden></p><div class="full"><button class="btn pri">Add user</button></div></form>`}
+function vAdmin(){
+  if(!can('admin'))return '<p class="empty">Admins only.</p>';
+  const UU=BE()?(S.adm||{}).users||[]:DB.users,LL=BE()?(S.adm||{}).logs||[]:DB.log,tab=ADM_TABS.some(x=>x[0]===S.admTab)?S.admTab:'users';
+  const sec={
+    users:()=>`<div class="panel"><div class="stephead"><h2>Users (${UU.length})</h2><button class="btn pri sm" data-act="adduser">+ Add user</button></div>
+      <div class="ulist">${S.adm&&S.adm.loading?'<p class="muted">Loading…</p>':''}${UU.map(u=>{const ls=LL.find(l=>l.user===u.id&&l.action==='Signed in');return `<div class="urow"><div class="u1"><b>${esc(u.name)}</b> <span class="badge ${u.role==='Admin'?'b-ol':u.role==='Accounts'?'b-blue':'b-grey'}">${esc(roleLabel(u))}</span><div class="small muted">${esc(u.id)}${u.email?' · '+esc(u.email):u.role==='PIC'?' · <span style="color:var(--amber)">no email, no reminders</span>':''} · last sign-in ${ls?fdt(ls.t):'never'}</div>
+        <div class="small">${u.role==='PIC'?((u.trips||[]).length?'Trips: '+(u.trips||[]).map(c=>{const t=T(c);return t?`${esc(t.dest)} ${yearOf(t)}`:esc(c)}).join(', '):'<span class="badge b-amber">No trips assigned</span>'):'<span class="muted">Sees all trips</span>'}</div></div>
+        <div class="u2"><button class="btn sm" data-act="access" data-u="${esc(u.id)}">Access</button><button class="btn sm" data-act="pw" data-u="${esc(u.id)}">Reset password</button>${u.id!==(me()||{}).id?`<button class="link small" style="color:var(--red)" data-act="rmuser" data-u="${esc(u.id)}">Remove</button>`:''}</div></div>`}).join('')}</div>
+      <p class="small muted" style="margin:12px 0 0"><b>Admin</b>: everything. <b>Accounts</b>: every trip, import and statistics. <b>PIC</b>: only the trips you assign, <i>Can edit</i> or <i>View only</i>.</p></div>`,
+    trips:()=>{const lost=DB.regs.filter(r=>!T(r.trip)).length,F=DB.forms||{},heads=S.formHeads||[],cur=F.destq||S.destQ||'';return `<div class="panel"><h2>How registrations link to trips</h2>
+      <div class="form"><div><label>Form question that holds the destination</label><select class="inp" data-set="linkset|destq">${heads.length?'':'<option value="">Connect the Google Sheet first</option>'}<option value="">Detect automatically${S.destQ&&!F.destq?' (found: '+esc(S.destQ)+')':''}</option>${heads.map(h=>`<option value="${esc(h)}" ${F.destq===h?'selected':''}>${esc(h)}</option>`).join('')}</select></div>
+      <div><label>Which trips can a registration join?</label><select class="inp" data-set="linkset|advanceOnly"><option value="1" ${advOnly()?'selected':''}>Only trips that start after it was sent (recommended)</option><option value="0" ${advOnly()?'':'selected'}>Any open trip</option></select></div></div>
+      <p class="small muted" style="margin:8px 0 0">${cur?`Reading the destination from: <b>${esc(cur)}</b>.`:'<span style="color:var(--red)">No destination question found yet. Choose it above.</span>'} Cancelled and closed trips never receive new registrations. Registrations sent on or after a trip's start date stay unlinked so you can check them.</p></div>
+      <div class="panel"><h2>Google Form choice for each trip</h2>
+      <p class="small">Type each trip's destination <b>exactly as it appears in your Google Form's destination question</b>, e.g. "Batu Pahat, Johor (19–22 Nov 2026)". New form answers are then linked to the right trip by themselves. For more than one wording, separate them with a semicolon (;).</p>
+      ${lost?`<div class="banner w">${lost} registration${lost>1?'s are':' is'} not linked to a trip. <button class="link small" data-act="view" data-v="people">Link them</button></div>`:''}
+      <div class="tlist">${DB.trips.slice().sort((a,b)=>b.start.localeCompare(a.start)).map(t=>`<div class="trow"><div class="t1"><b>${esc(t.dest)} ${yearOf(t)}</b><div class="small muted">${esc(t.id)} · ${fr(t.start,t.end)} · ${regsOf(t).length} linked${t.media?' · media folder ✓':' · <span style="color:var(--amber)">no media folder</span>'}</div></div>
+        <input class="inp" placeholder="Google Form choice, e.g. ${esc(t.dest)} (${MON[new Date(t.start).getMonth()]} ${yearOf(t)})" value="${esc(t.formCode||'')}" data-set="trip|${t.id}|formCode" aria-label="Google Form choice for ${esc(t.dest)}"><button class="link small" data-act="trip" data-id="${t.id}">Open</button></div>`).join('')||'<p class="muted">No trips yet.</p>'}</div>
+      <p class="small muted" style="margin:10px 0 0">Without a choice set, the app matches the answer to the trip's destination name or trip code.</p></div>`},
+    forms:()=>`<div class="panel"><h2>Forms library</h2><p class="small">The forms are the PDF files in the <b>forms</b> folder on GitHub, next to this app. Upload a new PDF with the same file name to replace one for everyone, or paste a link to use a different version.</p>
+      <div class="flist"><div class="frow"><div><b>Google registration form</b><div class="small muted">Shared by PICs in Step 2</div></div><input class="inp" type="url" placeholder="https://forms.gle/..." value="${esc(regLink())}" data-set="regform"></div>
+      ${Object.entries(FORMS).map(([k,f])=>{const sc=S.formScan&&!S.formScan.busy?S.formScan:null,hit=sc&&sc.map[k];return `<div class="frow"><div><b>${esc(f.title)}</b><div class="small"><button class="link small" data-act="form" data-f="${k}" data-std="1">${esc(hit?hit.name:f.file)}</button>${sc?(hit?' <span class="badge b-green">Found</span>':' <span class="badge b-red">Missing</span>'):''}</div></div><input class="inp" type="url" placeholder="Optional link instead of the PDF" value="${esc((DB.forms||{})[k]||'')}" data-set="formlink|${k}"></div>`}).join('')}</div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" data-act="scanforms">${S.formScan&&S.formScan.busy?'Checking…':'Check forms folder on GitHub'}</button><span class="small muted">${S.formScan&&!S.formScan.busy?(S.formScan.err?esc(S.formScan.err):`${S.formScan.files.length} PDF${S.formScan.files.length===1?'':'s'} found.`):'Files are matched by keyword (Registration, Refund, Workflow…).'}</span></div></div>`,
+    data:()=>{const d=findDups();return `<div class="panel"><h2>Import from Excel</h2><p class="small">Use the TOW Missions Import Template for trips, participants, finance, withdrawals, reports or past-year totals. A Google Form export also works for participants.</p><button class="btn" data-act="importmodal">Choose file to import</button></div>
+      <div class="panel"><div class="stephead"><h2>Past years (totals only)</h2><button class="btn sm" data-act="archmodal">+ Add past year</button></div>${DB.archive.length?`<div class="tbl"><table class="sm"><thead><tr><th>Year</th><th class="num">Trips</th><th class="num">People</th><th>Destinations</th><th class="num">Funds</th></tr></thead><tbody>${DB.archive.slice().sort((a,b)=>b.y-a.y).map(a=>`<tr><td>${a.y}</td><td class="num">${a.trips}</td><td class="num">${a.pax}</td><td>${esc(a.dest||'')}</td><td class="num">${a.funds?rm(a.funds):'—'}</td></tr>`).join('')}</tbody></table></div>`:'<p class="small muted">None yet.</p>'}</div>
+      ${d.count?`<div class="panel"><h2>Duplicates found</h2><p class="small">${d.count} duplicate participant record${d.count>1?'s':''} (same name and IC on the same trip). Clean-up keeps one record per person and moves their payments, team and withdrawal to it.</p><ul class="small" style="margin:0 0 10px;padding-left:18px">${d.regDup.slice(0,8).map(g=>`<li>${esc(g[0].name)} · ${esc((T(g[0].trip)||{}).dest||g[0].trip)} × ${g.length}</li>`).join('')}</ul><button class="btn pri" data-act="cleandups">Download backup, then clean up</button></div>`:''}
+      <div class="panel"><h2>Backup</h2><div class="row"><button class="btn" data-act="backup">Download backup (JSON)</button>${BE()?'':'<button class="btn" data-act="wipe">Clear all trip data on this device</button>'}</div><p class="small muted" style="margin:10px 0 0">${BE()?'All data lives in the Google Sheet. The backup is a copy for safekeeping (IC numbers stay masked).':'Users and access history are kept when clearing.'}</p></div>`},
+    settings:()=>`<div class="panel"><h2>Settings</h2><form class="form" data-form="settings"><div class="full"><label>Apps Script web app link</label><input name="backend" type="url" value="${esc(BACKEND_URL||DB.settings.backend)}" ${BACKEND_URL?'readonly':''} placeholder="https://script.google.com/macros/s/.../exec"></div>
+      <div class="full"><label>Media archive (main folder) <small>Admin and Accounts only; PICs get their own trip folder link</small></label><input name="driveRoot" type="url" value="${esc(mediaRoot())}" placeholder="https://1drv.ms/f/..."></div><div class="full"><button class="btn pri">Save settings</button></div></form>
+      <p class="small muted" style="margin:12px 0 0">App version ${APP_VER}</p></div>`,
+    history:()=>{const L=LL.filter(l=>!S.lf||l.user===S.lf).slice(0,300),showIP=L.some(l=>l.ip&&l.ip!=='unavailable');return `<div class="panel"><div class="stephead"><h2>Access history <span class="small muted" style="font-weight:500">${LL.length} entries</span></h2><div class="row"><select class="inp" style="width:auto" data-lf><option value="">All users</option>${UU.map(u=>`<option ${S.lf===u.id?'selected':''}>${esc(u.id)}</option>`).join('')}</select><button class="btn sm" data-act="logcsv">Export CSV</button></div></div>
+      <div class="tbl"><table class="sm"><thead><tr><th>When</th><th>User</th><th>Action</th><th>Record</th>${showIP?'<th>IP address</th>':''}<th>Device</th></tr></thead><tbody>
+      ${L.map(l=>`<tr><td style="white-space:nowrap">${fdt(l.t)}</td><td>${esc(l.user)}</td><td>${/IC/.test(l.action)?`<span class="badge b-amber">${esc(l.action)}</span>`:esc(l.action)}</td><td>${esc(l.target)}</td>${showIP?`<td>${l.ip&&l.ip!=='unavailable'?esc(l.ip):''}</td>`:''}<td>${esc(l.dev)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No activity yet.</td></tr>'}</tbody></table></div></div>`}
+  };
+  return `<div class="pagehead"><div><h1>Admin</h1></div></div>
+  <div class="subtabs" role="tablist">${ADM_TABS.map(([k,l])=>`<button role="tab" data-act="admtab" data-t="${k}" aria-selected="${tab===k}">${l}</button>`).join('')}</div>
+  ${sec[tab]()}`;
+}
+
 function tripCard(t){const c=isCancelled(t),f=finance(t),n=conf(t).length,ns=c?'':nextStep(t);
   return `<button class="tcard ${c?'cx':''}" data-act="trip" data-id="${t.id}"><div class="tc1"><div><div class="tname">${esc(t.dest)}</div><div class="tmeta">${fr(t.start,t.end)}</div></div>${statusBadge(t)}</div>
   <div class="tc2"><div><b>${n}</b><span>going${t.fee?' · '+conf(t).filter(r=>paidOf(r)>=t.fee).length+' paid':''}</span></div><div><b>${rm(f.inn)}</b><span>received</span></div><div><b>${t.overseas?'Overseas':'Local'}</b><span>PIC ${esc(t.pic||'not set')}</span></div></div>
@@ -745,8 +901,8 @@ function chart(){
   const rows=yearRows().slice(-10);if(!rows.length)return '<p class="empty">No data yet.</p>';
   const W=560,H=200,pad=20,bw=(W-pad*2)/rows.length,max=Math.max(...rows.map(r=>r.pax),10);
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="People sent per year"><g class="bars">${rows.map((r,i)=>{const h=r.pax/max*(H-60),x=pad+i*bw+bw*.18,y=H-28-h;
-    return `<rect class="${r.kind}" x="${x}" y="${y}" width="${bw*.64}" height="${Math.max(h,1)}" rx="3"/><text class="val" x="${x+bw*.32}" y="${y-6}" text-anchor="middle">${r.pax||'–'}</text><text x="${x+bw*.32}" y="${H-10}" text-anchor="middle">${r.y}${r.kind==='plan'?'*':''}</text>`}).join('')}</g></svg>
-  <p class="small muted" style="margin:6px 0 0">Olive: full trip records. Grey: yearly totals only. * Registrations so far.</p>`;
+    return `<g class="yb ${r.y===S.year?'sel':''}" data-act="year" data-y="${r.y}" style="cursor:pointer"><rect x="${pad+i*bw}" y="0" width="${bw}" height="${H}" fill="transparent"/><rect class="${r.kind}" x="${x}" y="${y}" width="${bw*.64}" height="${Math.max(h,1)}" rx="3"/><text class="val" x="${x+bw*.32}" y="${y-6}" text-anchor="middle">${r.pax||'–'}</text><text x="${x+bw*.32}" y="${H-10}" text-anchor="middle">${r.y}${r.kind==='plan'?'*':''}</text></g>`}).join('')}</g></svg>
+  <p class="small muted" style="margin:6px 0 0">People sent each year. Tap a year to see its trips. Grey: totals only. * Registrations so far.</p>`;
 }
 function topDest(){
   const c={};DB.archive.forEach(a=>String(a.dest).split(',').map(s=>s.trim()).forEach(d=>{if(d&&!d.startsWith('No'))c[d]=(c[d]||0)+1}));DB.trips.forEach(t=>c[t.dest]=(c[t.dest]||0)+1);
@@ -795,7 +951,7 @@ function mediaBox(t){
   return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
 }
 const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
-const APP_VER='6.0';
+const APP_VER='6.3';
 // User IDs: spaces become dots, other symbols are dropped (e.g. "Mary Tan" → "mary.tan")
 const cleanId=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[.]|[.]$/g,'');
 const regLink=()=>((DB.forms||{}).regform||'').trim();
@@ -908,7 +1064,7 @@ function tWorkflow(t,s){
 }
 function adminSetup(t){if(!can('all')||isClosed(t)||isCancelled(t))return '';const a=chk(t,'adm_form').done,m=!!(t.media||'').trim();if(a&&m)return '';
   return `<div class="panel adm"><h3>Admin setup for this trip</h3><ul class="check">
-  <li><div class="ci"><label><input type="checkbox" data-set="done|${t.id}|adm_form" ${a?'checked':''}><span>Add "${esc(t.dest)}" to the Google Form's destination choices</span></label></div></li>
+  <li><div class="ci"><label><input type="checkbox" data-set="done|${t.id}|adm_form" ${a?'checked':''}><span>Add "${esc(t.formCode||t.dest)}" to the Google Form's destination choices${t.formCode?'':' <em class="autot">tip: set the exact wording in Admin › Trips & form codes</em>'}</span></label></div></li>
   <li><div class="ci"><label><input type="checkbox" disabled ${m?'checked':''}><span>Create this trip's folder in the media archive and paste its link <em class="autot">ticks when the link is saved</em></span></label></div><div class="bind">${mediaBox(t)}</div></li>
   <li class="small muted" style="padding-left:30px">Then assign the PIC and A.PIC user accounts to this trip in Admin › Users › Access.</li></ul></div>`}
 function getPath(o,path){return path.split('.').reduce((a,k)=>a==null?undefined:a[k],o)}
@@ -927,6 +1083,7 @@ function printStatement(t){const f=finance(t),inn=f.L.filter(l=>l.dir==='in'),ou
   <table class="tb"><tr><td><span>PIC / A.PIC</span>${esc(t.pic||'')} / ${esc(t.apic||'')}</td><td><span>Participants</span>${conf(t).length} · Trip fee ${rm(t.fee)}</td></tr></table>
   ${sec('INCOME',inn)}${sec('EXPENSES',out)}
   ${W.length?`<div class="sh">WITHDRAWAL REFUNDS</div><table class="ck"><tbody>${W.map(w=>`<tr><td class="i">${esc((REG(w.pid)||{}).name||'')}</td><td>Scenario ${esc(w.scenario)}</td><td class="r">${rm(wRefund(w)).replace('RM','')}</td></tr>`).join('')}</tbody></table>`:''}
+  ${isSplit(t)?`<div class="sh">SPLIT BY PERSON</div><table class="ck"><thead><tr><th class="i">Name</th><th class="r">Paid in</th><th class="r">Shared</th><th class="r">Own / group</th><th class="r">Refunded</th><th class="r">Balance</th></tr></thead><tbody>${splitCalc(t).rows.map(x=>`<tr><td>${esc(x.r.name)}</td><td class="r">${rm(x.paid).replace('RM','')}</td><td class="r">${rm(x.shared).replace('RM','')}</td><td class="r">${rm(x.own).replace('RM','')}</td><td class="r">${rm(x.refunded).replace('RM','')}</td><td class="r"><b>${rm(x.bal).replace('RM','')}</b></td></tr>`).join('')}</tbody></table>`:''}
   <div class="sh">SUMMARY</div><table class="ck"><tbody><tr><td class="i">Total income</td><td class="r">${rm(f.inn)}</td></tr><tr><td class="i">Total expenses</td><td class="r">${rm(f.spent+f.reserved)}</td></tr>${f.wOut?`<tr><td class="i">Withdrawal refunds</td><td class="r">${rm(f.wOut)}</td></tr>`:''}<tr class="tot"><td class="i"><b>Balance</b></td><td class="r"><b>${rm(f.balance)}</b></td></tr></tbody></table>
   <table class="tb" style="margin-top:18pt"><tr><td style="height:40pt"><span>Prepared by (Treasurer / PIC), signature & date</span></td><td><span>Checked by (Church Accounts), signature & date</span></td></tr></table>
   <div class="ft">TOW Missions Trip &nbsp;|&nbsp; Final Financial Statement &nbsp;|&nbsp; Printed ${fd(new Date().toISOString())}</div></div>`;
@@ -950,7 +1107,9 @@ function tPeople(t){
   const F={all:['All',()=>true],unpaid:['Not fully paid',r=>r.status==='Confirmed'&&paidOf(r)<t.fee],noins:['No insurance',r=>r.status==='Confirmed'&&!r.insurer],passport:['Passport issue',r=>passportBad(t,r)],wd:['Withdrawn',r=>r.status==='Withdrawn']};
   if(!t.overseas)delete F.passport;
   const f=F[S.f]?S.f:'all',rows=regsOf(t).filter(F[f][1]);const tm=DB.teams[t.id]||[];
-  return `${forms(['participants','registration'])}<div class="panel"><div class="stephead"><div class="row" role="group" aria-label="Filter">${Object.entries(F).map(([k,[l,fn]])=>`<button class="chip" data-act="filter" data-f="${k}" aria-pressed="${k===f}">${l} (${regsOf(t).filter(fn).length})</button>`).join('')}</div></div>
+  const so=S.tsort||'name',tn=r=>((tm.find(g=>g.id===r.group)||{}).name||'~');
+  rows.sort(so==='pay'?(a,b)=>(paidOf(a)/(t.fee||1))-(paidOf(b)/(t.fee||1))||a.name.localeCompare(b.name):so==='paid'?(a,b)=>paidOf(b)-paidOf(a):so==='team'?(a,b)=>tn(a).localeCompare(tn(b))||a.name.localeCompare(b.name):so==='reg'?(a,b)=>String(a.regDate).localeCompare(String(b.regDate)):(a,b)=>a.name.localeCompare(b.name));
+  return `${forms(['participants','registration'])}<div class="panel"><div class="stephead"><div class="row" role="group" aria-label="Filter">${Object.entries(F).map(([k,[l,fn]])=>`<button class="chip" data-act="filter" data-f="${k}" aria-pressed="${k===f}">${l} (${regsOf(t).filter(fn).length})</button>`).join('')}</div><select class="inp" style="width:auto" data-pf="tsort" aria-label="Sort">${[['name','Sort: Name A–Z'],['pay','Sort: Least paid first'],['paid','Sort: Most paid'],['team','Sort: Team'],['reg','Sort: Registered first']].map(([v,l])=>`<option value="${v}" ${so===v?'selected':''}>${l}</option>`).join('')}</select></div>
   <div class="tbl"><table><thead><tr><th>Name</th><th>IC</th><th>Payment</th><th class="num">Paid / fee</th><th>Insurance</th>${t.overseas?'<th>Passport expiry</th>':''}<th>Team</th><th>Role</th><th>Mission trips (recent first)</th></tr></thead><tbody>
   ${rows.map(r=>{const ps=payState(t,r),g=tm.find(x=>x.id===r.group);
     if(r.status==='Withdrawn')return `<tr><td><button class="link" data-act="profile" data-id="${r.id}">${esc(r.name)}</button></td><td class="mask">${maskIC(r.ic)}</td><td colspan="${t.overseas?7:6}"><span class="badge b-grey">Withdrawn</span> <button class="link small" data-act="tab" data-t="withdrawals">See withdrawal</button></td></tr>`;
@@ -974,6 +1133,37 @@ function tTeams(t){
   ${un.length&&tm.length?`<p class="small muted" style="margin:10px 0 0">${un.length} not yet in a team.</p>`:''}
   <datalist id="rolelist">${['Treasurer','Worship','Kids programme','Logistics','Sharing / testimony','Photos & media','Ministry team','Activity helper','First aid','Translator'].map(x=>`<option value="${x}">`).join('')}</datalist></div>`;
 }
+/* =================== split mode (each person's own share, like Splid) =================== */
+const CLOSE_CATS=['Surplus refund','Donation to church','Other close-out'];
+const isSplit=t=>!!P(t).split;
+const spFor=l=>Array.isArray(l.split)&&l.split.length?l.split:null;
+function splitCalc(t){
+  const c=conf(t),ids=c.map(r=>r.id),n=ids.length||1,f=finance(t),row={};
+  ids.forEach(id=>row[id]={paid:0,shared:0,own:0,refunded:0});
+  let sharedIn=0,sharedOut=0;
+  f.L.forEach(l=>{const a=+l.amount||0;
+    if(l.dir==='in'){if(l.pid&&row[l.pid])row[l.pid].paid+=a;else sharedIn+=a;return}
+    if(CLOSE_CATS.includes(l.cat)&&l.pid&&row[l.pid]){row[l.pid].refunded+=a;return}
+    const who=spFor(l);if(who){const k=who.filter(id=>row[id]);if(k.length){k.forEach(id=>row[id].own+=a/k.length);return}}
+    sharedOut+=a});
+  // people who withdrew: what they paid less their refund stays in the pool for everyone
+  sharedIn-=f.wOut;
+  return {rows:c.map(r=>{const x=row[r.id];x.shared=(sharedOut-sharedIn)/n;x.bal=x.paid-x.shared-x.own-x.refunded;return {r,...x}}),sharedIn,sharedOut,budget:+P(t).splitBudget||0}}
+function splitPanel(t){if(!isSplit(t))return '';const k=splitCalc(t),ed=can('edit'),pos=k.rows.filter(x=>x.bal>0.009),neg=k.rows.filter(x=>x.bal<-0.009);
+  return `<div class="panel"><div class="stephead"><h2 style="margin:0">Split by person</h2>${ed&&pos.length?`<button class="btn sm pri" data-act="splitrefund" data-id="${t.id}">Refund each person's balance</button>`:''}</div>
+  <p class="small muted" style="margin-top:-4px">Shared costs are split equally across everyone going. Spending marked for some people (e.g. a free & easy group's meal or Grab) is split only among them. Whoever spent less gets more back.</p>
+  <div class="form" style="margin-bottom:10px"><div><label>Free & easy allowance per person (RM) <small>optional, for the warning below</small></label><input class="inp" type="number" min="0" value="${esc(P(t).splitBudget||'')}" data-set="plan|${t.id}|splitBudget" ${ed?'':'disabled'}></div></div>
+  <div class="tbl"><table class="sm"><thead><tr><th>Name</th><th class="num">Paid in</th><th class="num">Shared costs</th><th class="num">Own / group spending</th><th class="num">Refunded</th><th class="num">Balance</th></tr></thead><tbody>
+  ${k.rows.map(x=>`<tr><td>${esc(x.r.name)}</td><td class="num">${rm(x.paid)}</td><td class="num">${rm(x.shared)}</td><td class="num">${rm(x.own)}${k.budget&&x.own>k.budget?` <span class="badge b-red">over by ${rm(x.own-k.budget)}</span>`:''}</td><td class="num">${rm(x.refunded)}</td><td class="num"><b style="color:${x.bal>0.009?'var(--green)':x.bal<-0.009?'var(--red)':'inherit'}">${x.bal>0.009?'Refund '+rm(x.bal):x.bal<-0.009?'Owes '+rm(-x.bal):'RM0'}</b></td></tr>`).join('')||'<tr><td colspan="6" class="empty">No participants yet.</td></tr>'}
+  ${k.rows.length?`<tr class="total"><td>Total</td><td class="num">${rm(k.rows.reduce((a,x)=>a+x.paid,0))}</td><td class="num">${rm(k.rows.reduce((a,x)=>a+x.shared,0))}</td><td class="num">${rm(k.rows.reduce((a,x)=>a+x.own,0))}</td><td class="num">${rm(k.rows.reduce((a,x)=>a+x.refunded,0))}</td><td class="num">${rm(k.rows.reduce((a,x)=>a+x.bal,0))}</td></tr>`:''}</tbody></table></div>
+  ${neg.length?`<p class="small" style="color:var(--red);margin:8px 0 0">${neg.length} ${neg.length>1?'people owe':'person owes'} money: record their top-up as Money in from that participant.</p>`:''}</div>`}
+function modeSwitch(t){const ed=can('edit');return `<div class="panel modep"><div><b>Finance mode</b><div class="small muted">${isSplit(t)?'Split per person: each expense says who it was for, and each person gets back what they didn\'t use.':'Team pool: everyone shares all costs equally (default).'}</div></div>
+  <div class="seg" role="group" aria-label="Finance mode"><button data-act="finmode" data-id="${t.id}" data-m="pool" aria-pressed="${!isSplit(t)}" ${ed?'':'disabled'}>Team pool</button><button data-act="finmode" data-id="${t.id}" data-m="split" aria-pressed="${isSplit(t)}" ${ed?'':'disabled'}>Split per person</button></div></div>`}
+function forPicker(t,l){if(!isSplit(t)||l.dir!=='out'||CLOSE_CATS.includes(l.cat))return '';const sel=new Set(spFor(l)||[]),tm=DB.teams[t.id]||[],some=sel.size>0;
+  return `<div class="full forbox"><label>Who is this for?</label><div class="seg sm" role="group"><button type="button" data-act="forall" aria-pressed="${!some}">Everyone (shared)</button><button type="button" data-act="forsome" aria-pressed="${some}">Selected people</button></div>
+  <div class="forlist" ${some?'':'hidden'}>${tm.length?`<div class="row" style="margin:6px 0">${tm.map(g=>`<button type="button" class="chip" data-act="forteam" data-g="${g.id}">${esc(g.name)}</button>`).join('')}</div>`:''}
+  ${conf(t).map(r=>`<label class="chk"><input type="checkbox" name="sp" value="${r.id}" data-team="${esc(r.group||'')}" ${sel.has(r.id)?'checked':''}> ${esc(r.name)}</label>`).join('')}</div></div>`}
+
 function tFinance(t){
   const f=finance(t),closed=isClosed(t),ro=can('edit');tLinks(t);
   let bal=0;const run={};[...f.L].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0).forEach(l=>{if(l.status!=='Reserved')bal+=(l.dir==='in'?1:-1)*(+l.amount||0);run[l.id]=l.status==='Reserved'?null:bal});
@@ -987,12 +1177,13 @@ function tFinance(t){
    ${TL.length?`<div class="tbl"><table class="sm"><tbody>${TL.map(l=>`<tr><td><b>${esc(l.name)}</b>${(()=>{const g=tm.find(g=>(REG(g.treasurer)||{}).name===l.name);return g?` <span class="muted">${esc(g.name)}</span>`:''})()}</td><td class="small muted">${l.created?fd(l.created):''}</td><td style="text-align:right;white-space:nowrap"><button class="link small" data-act="copy" data-v="${esc(tUrl(t,l.key))}">Copy link</button>${ro?` · <button class="link small" data-act="tlinkoff" data-id="${t.id}" data-k="${l.key}">Turn off</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:''}
    ${ro?`<form class="row" data-form="tlink" data-id="${t.id}" style="margin-top:10px;flex-wrap:nowrap"><input class="inp" name="name" list="tnames-${t.id}" placeholder="Treasurer's name" required><button class="btn sm pri" style="white-space:nowrap">Create link</button></form><datalist id="tnames-${t.id}">${tnames.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`:''}</div>`;
   const closePanel=`<div class="panel"><h2>Close-out</h2>${f.balance>0.009&&ro?`<p class="small">Balance ${rm(f.balance)} left. <button class="btn sm pri" data-act="surplus" data-id="${t.id}">Distribute surplus</button></p>`:''}${closeBox(t)}</div>`;
-  return `${forms(['finance'])}${f.claims.length?`<div class="warn r">${f.claims.length} personal payment${f.claims.length>1?'s':''} waiting to be claimed. Ask treasurers to pay directly next time so no one uses their own money.</div>`:''}
+  return `${forms(['finance'])}${modeSwitch(t)}${f.claims.length?`<div class="warn r">${f.claims.length} personal payment${f.claims.length>1?'s':''} waiting to be claimed. Ask treasurers to pay directly next time so no one uses their own money.</div>`:''}
   ${link}
   <div class="money" style="margin-top:20px"><div><span>Money in</span><b>${rm(f.inn)}</b></div><div><span>Spent</span><b>${rm(f.spent)}</b></div><div><span>Reserved (to pay)</span><b>${rm(f.reserved)}</b></div><div><span>${closed?'Surplus to refund':'Balance'}</span><b>${rm(f.balance)}</b></div></div>
+  ${splitPanel(t)}
   <div class="panel"><div class="stephead"><div class="row">${[['all','All entries'],['in','Money in'],['out','Money out'],['claims','Personal claims'],['link','Via treasurer link']].map(([k,l])=>`<button class="chip" data-act="filter" data-f="${k}" aria-pressed="${(['in','out','claims','link'].includes(S.f)?S.f:'all')===k}">${l}</button>`).join('')}</div>${ro?`<button class="btn sm pri" data-act="ledger" data-id="${t.id}">Add entry</button>`:''}</div>
   <div class="tbl"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Paid by</th><th>Status</th><th class="num">Credit (in)</th><th class="num">Debit (out)</th><th class="num balc">Running balance</th>${ro?'<th></th>':''}</tr></thead><tbody>
-  ${fl.map(l=>`<tr><td style="white-space:nowrap">${fd(l.date)}</td><td>${esc(l.cat)}</td><td>${esc(l.desc)}${l.pid&&REG(l.pid)?` · ${esc(REG(l.pid).name)}`:''}${l.ref?` <span class="muted small">${esc(l.ref)}</span>`:''}${l.receipt?` <a class="small" href="${esc(l.receipt)}" target="_blank" rel="noopener">receipt</a>`:''}${l.source==='Treasurer link'?` <span class="badge b-blue">via treasurer link${l.enteredBy?' · '+esc(l.enteredBy):''}</span>`:''}</td><td>${l.dir==='out'?esc(l.paidBy):'—'}</td>
+  ${fl.map(l=>`<tr><td style="white-space:nowrap">${fd(l.date)}</td><td>${esc(l.cat)}</td><td>${esc(l.desc)}${l.pid&&REG(l.pid)?` · ${esc(REG(l.pid).name)}`:''}${l.ref?` <span class="muted small">${esc(l.ref)}</span>`:''}${l.receipt?` <a class="small" href="${esc(l.receipt)}" target="_blank" rel="noopener">receipt</a>`:''}${isSplit(t)&&l.dir==='out'&&!CLOSE_CATS.includes(l.cat)?` <span class="badge ${spFor(l)?'b-amber':'b-grey'}">${spFor(l)?'for '+(spFor(l).length===1?esc((REG(spFor(l)[0])||{}).name||'1 person'):spFor(l).length+' people'):'shared'}</span>`:''}${l.source==='Treasurer link'?` <span class="badge b-blue">via treasurer link${l.enteredBy?' · '+esc(l.enteredBy):''}</span>`:''}</td><td>${l.dir==='out'?esc(l.paidBy):'—'}</td>
    <td><span class="badge ${l.status==='Paid'||l.status==='Claimed'?'b-green':l.status==='Reserved'?'b-blue':'b-amber'}">${esc(l.status)}</span></td><td class="num">${l.dir==='in'?rm(l.amount):''}</td><td class="num">${l.dir==='out'?rm(l.amount):''}</td><td class="num balc"><b>${run[l.id]===null?'<span class="muted">reserved</span>':rm(run[l.id])}</b></td>${ro?`<td><button class="link small" data-act="ledger" data-id="${t.id}" data-l="${l.id}">Edit</button></td>`:''}</tr>`).join('')||'<tr><td colspan="9" class="empty">No entries.</td></tr>'}
   </tbody></table></div><p class="small muted" style="margin:10px 0 0">Balance runs in date order across all entries. Reserved bookings are not counted until paid.</p></div>
   <div class="grid2" style="margin-top:20px"><div class="stack">${closePanel}<div class="panel"><h2>Spending by category</h2>${Object.keys(byCat).length?Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([c,a])=>`<div class="catbar"><span>${esc(c)}</span><span class="bar"><i style="width:${a/max*100}%"></i></span><span class="small">${rm(a)}</span></div>`).join(''):'<p class="muted">No spending yet.</p>'}</div></div>
@@ -1019,19 +1210,6 @@ function tReport(t){
   <p class="small muted" id="saved" style="min-height:18px;margin:10px 0 0"></p></div>`;
 }
 
-/* =================== participants directory =================== */
-function vPeople(){
-  const map={};DB.regs.forEach(r=>{(map[pkey(r)]=map[pkey(r)]||[]).push(r)});
-  let rows=Object.values(map).map(rs=>({r:rs[0],h:tripHistory(rs[0])})).filter(x=>x.h.length);
-  if(S.q)rows=rows.filter(x=>x.r.name.toLowerCase().includes(S.q.toLowerCase()));
-  rows.sort((a,b)=>b.h.length-a.h.length||a.r.name.localeCompare(b.r.name));
-  const lost=DB.regs.filter(r=>!T(r.trip));
-  const lostPanel=lost.length?`<div class="panel" id="unlinked"><h2>Registrations not linked to a trip (${lost.length})</h2><p class="small muted">Choose the trip for each. This also fills in the Trip Code in the Google Sheet.</p><div class="tbl"><table><thead><tr><th>Name</th><th>Destination answered</th><th>Trip</th></tr></thead><tbody>${lost.map(r=>`<tr><td>${esc(r.name)}</td><td>${esc(r.destAnswer||'—')}</td><td><select class="inp" data-set="reg|${r.id}|trip" ${can('edit')?'':'disabled'}><option value="">Choose trip</option>${DB.trips.map(t=>`<option value="${t.id}">${esc(t.dest)} ${yearOf(t)}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div></div>`:'';
-  return lostPanel+`<div class="pagehead"><div><h1>Participants</h1><p class="sub">${rows.length} people with mission trip records</p></div><input class="search" type="search" placeholder="Search by name" value="${esc(S.q)}" data-q aria-label="Search participants"></div>
-  <div class="panel"><div class="tbl"><table><thead><tr><th>Name</th><th>IC</th><th>Service</th><th class="num">Trips</th><th>Mission history, most recent first (up to 10)</th></tr></thead><tbody>
-  ${rows.map(x=>`<tr><td><button class="link" data-act="profile" data-id="${x.h[0].id}">${esc(x.r.name)}</button> ${x.h.length>=3?'<span class="badge b-ol">Regular</span>':''}</td><td class="mask">${maskIC(x.r.ic)}</td><td>${esc(x.r.service)}</td><td class="num">${x.h.length}</td><td>${tchips(x.h)}</td></tr>`).join('')||'<tr><td colspan="5" class="empty">No one matches that name.</td></tr>'}
-  </tbody></table></div></div>`;
-}
 /* =================== statistics =================== */
 function vStats(){
   const rows=yearRows().reverse();
@@ -1078,32 +1256,6 @@ function vAccess(id){
   <p class="small muted" data-accnote ${role==='PIC'?'hidden':''}>${role==='Admin'?'Admin':'Accounts'} users see every trip.</p>
   <div class="row" style="margin-top:14px"><button class="btn pri">Save access</button><button type="button" class="btn" data-act="closebtn">Cancel</button></div></form>`;
 }
-function vAdmin(){
-  if(!can('admin'))return '<p class="empty">Admins only.</p>';
-  const UU=BE()?(S.adm||{}).users||[]:DB.users,LL=BE()?(S.adm||{}).logs||[]:DB.log;
-  const L=LL.filter(l=>!S.lf||l.user===S.lf).slice(0,300),showIP=L.some(l=>l.ip&&l.ip!=='unavailable');
-  return `<div class="pagehead"><div><h1>Admin</h1><p class="sub">Users, access history and settings · app version ${APP_VER}</p></div></div>
-  <div class="panel"><h2>Users</h2><div class="tbl"><table><thead><tr><th>User ID</th><th>Name</th><th>Role</th><th>Trips they can see</th><th>Last sign-in</th><th></th></tr></thead><tbody>
-  ${S.adm&&S.adm.loading?'<tr><td colspan="6" class="muted">Loading…</td></tr>':''}${UU.map(u=>{const ls=LL.find(l=>l.user===u.id&&l.action==='Signed in');return `<tr><td>${esc(u.id)}</td><td>${esc(u.name)}${u.email?`<div class="small muted">${esc(u.email)}</div>`:u.role==='PIC'?'<div class="small" style="color:var(--amber)">No email: no reminders</div>':''}</td><td>${esc(roleLabel(u))}</td><td class="small">${u.role==='PIC'?((u.trips||[]).length?(u.trips||[]).map(c=>{const t=T(c);return t?`${esc(t.dest)} ${yearOf(t)}`:esc(c)}).join(', '):'<span class="badge b-amber">None assigned</span>'):'<span class="muted">All trips</span>'}</td><td>${ls?fdt(ls.t):'Never'}</td><td><button class="link small" data-act="access" data-u="${esc(u.id)}">Access</button> · <button class="link small" data-act="pw" data-u="${esc(u.id)}">Reset password</button>${u.id!==(me()||{}).id?` · <button class="link small" data-act="rmuser" data-u="${esc(u.id)}">Remove</button>`:''}</td></tr>`}).join('')}</tbody></table></div>
-  <form class="form" data-form="user" style="margin-top:14px"><div><label>User ID <small>used to sign in · no spaces (e.g. mary.tan)</small></label><input name="id" required autocomplete="off" autocapitalize="none" spellcheck="false" data-uid></div><div><label>Name</label><input name="name" required></div><div><label>Email <small>for step reminders</small></label><input name="email" type="email" placeholder="name@example.com"></div>
-  <div><label>Role</label><select name="role" data-accrole><option>PIC</option><option>Accounts</option><option>Admin</option></select></div><div><label>Password</label><input name="pw" type="password" minlength="8" required autocomplete="new-password"></div>
-  <div class="full" data-acctrips><label>Trips this PIC can see <small>tick one or more; the app goes by the trip you tick, not by the name typed</small></label>${tripPicker(new Set(),'')}
-  <label style="margin-top:10px">PIC access</label><select name="access" style="max-width:220px"><option value="Edit">Can edit</option><option value="View">View only</option></select></div>
-  <p class="small muted full" data-accnote hidden></p><div class="full"><button class="btn pri">Add user</button></div></form>
-  <p class="small muted" style="margin:10px 0 0"><b>Admin</b>: everything, including users and deleting participants. <b>Accounts</b>: every trip, statistics and import. <b>PIC</b>: only the trips you assign, either <i>Can edit</i> (checklist, payments, teams, report, full IC with password) or <i>View only</i>. After adding a PIC you choose their trips.</p></div>
-  <details class="panel flow" ${S.histOpen?'open':''} data-hist><summary>Access history <span class="small muted" style="font-weight:500;margin-left:8px">${LL.length} entries${LL[0]?' · latest '+fdt(LL[0].t):''}</span></summary><div class="stephead" style="margin-top:12px"><span></span><div class="row"><select class="inp" style="width:auto" data-lf><option value="">All users</option>${UU.map(u=>`<option ${S.lf===u.id?'selected':''}>${esc(u.id)}</option>`).join('')}</select><button class="btn sm" data-act="logcsv">Export CSV</button></div></div>
-  <div class="tbl"><table class="sm"><thead><tr><th>When</th><th>User</th><th>Action</th><th>Record</th>${showIP?'<th>IP address</th>':''}<th>Device</th></tr></thead><tbody>
-  ${L.map(l=>`<tr><td style="white-space:nowrap">${fdt(l.t)}</td><td>${esc(l.user)}</td><td>${/IC/.test(l.action)?`<span class="badge b-amber">${esc(l.action)}</span>`:esc(l.action)}</td><td>${esc(l.target)}</td>${showIP?`<td>${l.ip&&l.ip!=='unavailable'?esc(l.ip):''}</td>`:''}<td>${esc(l.dev)}</td></tr>`).join('')||'<tr><td colspan="6" class="empty">No activity yet.</td></tr>'}</tbody></table></div></details>
-  <div class="panel"><h2>Forms library</h2><p class="small">The forms are the PDF files in the <b>forms</b> folder on GitHub, next to this app. To update one, upload the new PDF with exactly the same file name and it replaces the old one for everyone. Or paste a Google Drive link to use a different version.</p>
-  <div class="tbl"><table class="sm"><thead><tr><th>Form</th><th>File in forms folder</th><th>Or use a link instead</th></tr></thead><tbody><tr><td><b>Google registration form</b><div class="small muted">Shown to PICs in Step 2 to share</div></td><td class="small muted">Online form</td><td><input class="inp" type="url" placeholder="https://forms.gle/..." value="${esc(regLink())}" data-set="regform"></td></tr>${Object.entries(FORMS).map(([k,f])=>{const sc=S.formScan&&!S.formScan.busy?S.formScan:null,hit=sc&&sc.map[k];return `<tr><td><b>${esc(f.title)}</b></td><td><button class="link small" data-act="form" data-f="${k}" data-std="1">${esc(hit?hit.name:f.file)}</button>${sc?(hit?' <span class="badge b-green">Found</span>':' <span class="badge b-red">Missing</span>'):''}</td><td><input class="inp" type="url" placeholder="Leave blank to use the standard PDF" value="${esc((DB.forms||{})[k]||'')}" data-set="formlink|${k}"></td></tr>`}).join('')}</tbody></table></div>
-  <div class="row" style="margin-top:10px"><button class="btn sm" data-act="scanforms">${S.formScan&&S.formScan.busy?'Checking…':'Check forms folder on GitHub'}</button><span class="small muted">${S.formScan&&!S.formScan.busy?(S.formScan.err?esc(S.formScan.err):`${S.formScan.files.length} PDF${S.formScan.files.length===1?'':'s'} found. Renamed files are matched by keyword (Registration, Refund, Itinerary…).`):'Files can have any name as long as it includes the form\'s keyword.'}</span></div></div>
-  <div class="panel"><h2>Settings</h2><form class="form" data-form="settings"><div class="full"><label>Apps Script web app link <small>Connects live Google Sheet data, AI on GitHub, and server-side logins</small></label><input name="backend" type="url" value="${esc(BACKEND_URL||DB.settings.backend)}" ${BACKEND_URL?'readonly':''} placeholder="https://script.google.com/macros/s/.../exec"></div>
-  <div class="full"><label>Media archive (main folder) <small>Admin and Accounts only. PICs never see this link; they get their own trip folder link.</small></label><input name="driveRoot" type="url" value="${esc(mediaRoot())}" placeholder="https://1drv.ms/f/..."></div><div class="full"><button class="btn pri">Save settings</button></div></form></div>
-  ${(()=>{const d=findDups();return d.count?`<div class="panel"><h2>Duplicates found</h2><p class="small">${d.count} participant record${d.count>1?'s are':' is a'} duplicate${d.count>1?'s':''} (same name and IC on the same trip), probably from importing the same file twice. Clean-up keeps one record per person, merges any missing details into it, moves their payments, team and withdrawal to that record, and removes repeated finance rows.</p><ul class="small" style="margin:0 0 10px;padding-left:18px">${d.regDup.slice(0,8).map(g=>`<li>${esc(g[0].name)} · ${esc((T(g[0].trip)||{}).dest||g[0].trip)} ${T(g[0].trip)?yearOf(T(g[0].trip)):''} × ${g.length}</li>`).join('')}${d.regDup.length>8?`<li>and ${d.regDup.length-8} more</li>`:''}</ul><button class="btn pri" data-act="cleandups">Download backup, then clean up</button></div>`:''})()}
-  <div class="panel"><h2>Data</h2><div class="row"><button class="btn" data-act="backup">Download backup (JSON)</button>${BE()?'':'<button class="btn" data-act="wipe">Clear all trip data on this device</button>'}</div>
-  <p class="small muted" style="margin:10px 0 0">${BE()?'All data lives in the Google Sheet. The backup is a copy for safekeeping (IC numbers stay masked).':'Users and access history are kept when clearing.'}</p></div>`;
-}
-
 /* =================== modals =================== */
 function modal(html,center){$('#modal').innerHTML=`<div class="scrim" data-act="close"><div class="sheet ${center?'center':''}" role="dialog" aria-modal="true">${html}</div></div>`;const f=$('#modal [autofocus]')||$('#modal .x');if(f)f.focus()}
 function closeModal(){$('#modal').innerHTML='';clearTimeout(S.revealT);S.revealed={}}
@@ -1146,15 +1298,15 @@ function closeBox(t){
   return `<div class="small">${cc.length?`<div style="margin-bottom:6px">Before this trip can be closed:</div><ul style="margin:0;padding-left:18px">${cc.map(c=>`<li><button class="link small" style="font-weight:400" data-act="goto" data-id="${t.id}" data-tab="${c.go.tab}" data-f="${c.go.f||'all'}" data-s="${c.go.s??''}">${esc(c.text)}</button></li>`).join('')}</ul>`:'<span class="badge b-green">All done: account RM0, report submitted, every step complete</span>'}
   ${can('edit')?`<div style="margin-top:8px"><button class="btn sm ${cc.length?'':'pri'}" data-act="closetrip" data-id="${t.id}" ${cc.length?'disabled':''}>Close this trip</button></div>`:''}</div>`;
 }
-function vSurplus(t){
-  const f=finance(t),c=conf(t),B=Math.round(f.balance*100)/100,each=c.length?Math.floor(B/c.length*100)/100:0,rem=Math.round((B-each*c.length)*100)/100;
+function vSurplus(t,amts){
+  const f=finance(t),c=conf(t),B=Math.round(f.balance*100)/100,each=c.length?Math.floor(B/c.length*100)/100:0,amt=r=>amts?Math.max(0,Math.floor((amts[r.id]||0)*100)/100):each,rem=Math.max(0,Math.round((B-c.reduce((a,r)=>a+amt(r),0))*100)/100);
   return `<div class="sheethead"><div><h2>Distribute surplus</h2><p class="sub">${esc(t.dest)} ${yearOf(t)} · balance ${rm(B)}</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
-  <p class="small">Split equally by default. Change any amount, or let someone donate their share to the church. The trip account must end at RM0 before the trip can be closed.</p>
+  <p class="small">${amts?'Amounts are each person\'s balance from Split per person.':'Split equally by default.'} Change any amount, or let someone donate their share to the church. The trip account must end at RM0 before the trip can be closed.</p>
   <form data-form="surplus" data-id="${t.id}"><div class="tbl"><table class="sm"><thead><tr><th>Traveller</th><th>Their share</th><th class="num">Amount (RM)</th></tr></thead><tbody>
-  ${c.map(r=>`<tr><td>${esc(r.name)}</td><td><select class="inp" name="c_${r.id}"><option>Refund</option><option>Donate to church</option></select></td><td><input class="inp" style="text-align:right;width:110px" type="number" step="0.01" min="0" name="a_${r.id}" value="${each.toFixed(2)}" data-surp></td></tr>`).join('')}
+  ${c.map(r=>`<tr><td>${esc(r.name)}</td><td><select class="inp" name="c_${r.id}"><option>Refund</option><option>Donate to church</option></select></td><td><input class="inp" style="text-align:right;width:110px" type="number" step="0.01" min="0" name="a_${r.id}" value="${amt(r).toFixed(2)}" data-surp></td></tr>`).join('')}
   <tr><td><input class="inp" name="odesc" value="${rem>0?'Rounding balance':''}" placeholder="Other (description)"></td><td><select class="inp" name="ocat"><option>Donation to church</option><option>Other close-out</option></select></td><td><input class="inp" style="text-align:right;width:110px" type="number" step="0.01" min="0" name="oamt" value="${rem.toFixed(2)}" data-surp></td></tr>
   </tbody></table></div>
-  <div class="form" style="margin-top:12px"><div><label>Date paid</label><input type="date" name="date" value="${TODAY.toISOString().slice(0,10)}"></div><div><label>Remaining after this</label><b id="surp-left" data-b="${B}">${rm(B-each*c.length-rem)}</b></div></div>
+  <div class="form" style="margin-top:12px"><div><label>Date paid</label><input type="date" name="date" value="${TODAY.toISOString().slice(0,10)}"></div><div><label>Remaining after this</label><b id="surp-left" data-b="${B}">${rm(B-c.reduce((a,r)=>a+amt(r),0)-rem)}</b></div></div>
   <div class="row" style="margin-top:14px"><button class="btn pri">Record refunds</button></div></form>`;
 }
 function findDups(){
@@ -1217,6 +1369,7 @@ function vLedgerForm(t,l){
   <div><label>Amount (RM)</label><input type="number" name="amount" step="0.01" min="0" value="${esc(l.amount||'')}" required></div>
   ${l.dir==='in'?`<div><label>From participant <small>contributions only</small></label><select name="pid"><option value="">—</option>${regsOf(t).map(r=>`<option value="${r.id}" ${r.id===l.pid?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div><label>Reference</label><input name="ref" value="${esc(l.ref||'')}"></div>`:
   `<div><label>Paid by</label><select name="paidBy">${PAIDBY.map(c=>`<option ${c===l.paidBy?'selected':''}>${c}</option>`).join('')}</select></div><div><label>Status</label><select name="status">${PSTAT.map(c=>`<option ${c===l.status?'selected':''}>${c}</option>`).join('')}</select></div>`}
+  ${forPicker(t,l)}
   <div class="full"><label>Receipt link <small>photo in the cloud folder</small></label><input type="url" name="receipt" value="${esc(l.receipt||'')}"></div>
   ${l.dir==='out'?'<div class="full small muted">Accommodation is usually paid ahead or reserved. Mark "Reserved" until paid. Personal (claim) should be rare: treasurers pay directly where possible.</div>':''}
   <div class="full row"><button class="btn pri">Save entry</button>${l.id?`<button type="button" class="btn" data-act="rmledger" data-l="${l.id}">Delete</button>`:''}</div></form>`;
@@ -1247,6 +1400,7 @@ function vTripForm(t){
   <div><label>Trip code <small>auto if blank</small></label><input name="id" value="${esc(t.id)}" ${t.id?'readonly':''} placeholder="2027-IDN"></div>
   <div><label>Start date</label><input type="date" name="start" value="${esc(t.start)}" required></div><div><label>End date</label><input type="date" name="end" value="${esc(t.end)}" required></div>
   <div><label>Trip fee (RM)</label><input type="number" name="fee" value="${esc(t.fee)}"></div><div><label>Deposit (RM)</label><input type="number" name="deposit" value="${esc(t.deposit)}"></div>
+  <div class="full"><label>Google Form choice <small>exactly as written in the form's destination question; registrations with this answer link to this trip</small></label><input name="formCode" value="${esc(t.formCode||'')}" placeholder="e.g. ${esc(t.dest||'Batu Pahat, Johor')} (Nov ${t.start?yearOf(t):'2026'})"></div>
   <div><label>Status</label><select name="status"><option ${!isCancelled(t)?'selected':''}>Planned</option><option ${isCancelled(t)?'selected':''}>Cancelled</option></select></div>
   <div><label>Reason if cancelled</label><input name="cancelReason" value="${esc(t.cancelReason||'')}"></div>
   <div class="full small muted">Cancelled trips stay listed as planned trips for the year, marked Cancelled. Step due dates are suggested from the start date. You can change each one in the workflow.</div>
@@ -1357,8 +1511,14 @@ const iso=v=>{if(v instanceof Date&&!isNaN(v))return new Date(v.getTime()+432e5)
 const num=v=>+String(v??'').replace(/[^0-9.\-]/g,'')||0;
 function rowsOf(wb,name){const ws=wb.Sheets[name];if(!ws)return [];return XLSX.utils.sheet_to_json(ws,{defval:''}).filter(r=>{const c=String(Object.values(r)[0]||'');return c&&!/^example/i.test(c)})}
 const col=(r,...keys)=>{for(const k of Object.keys(r))if(keys.includes(norm(k)))return r[k];return ''};
-function findTrip(code,dest,date){
+const advOnly=()=>(DB.forms||{}).advanceOnly!==false;
+// trips a registration may link to: open trips, and (advance only) starting after the day it was sent
+const openFor=date=>DB.trips.filter(t=>!isCancelled(t)&&!isClosed(t)&&(!advOnly()||!date||t.start>String(date).slice(0,10)));
+function findTrip(code,dest,date,any){
   if(code&&T(String(code).trim()))return T(String(code).trim());
+  if(!any){const keep=DB.trips;DB.trips=openFor(date);try{return findTrip(code,dest,date,true)}finally{DB.trips=keep}}
+  if(dest){const n=x=>String(x||'').toLowerCase().replace(/\s+/g,' ').trim(),dd=n(dest),codes=t=>String(t.formCode||'').split(';').map(n).filter(Boolean);
+    const ex=DB.trips.find(t=>codes(t).includes(dd))||DB.trips.find(t=>codes(t).some(c=>dd.includes(c)));if(ex)return ex}
   if(dest){const d=String(dest).toLowerCase();const bc=DB.trips.find(t=>d.includes(String(t.id).toLowerCase()));if(bc)return bc;const c=DB.trips.filter(t=>d.includes(t.dest.toLowerCase()));if(c.length===1)return c[0];const y=(String(dest).match(/20\d\d/)||[])[0]||(date||'').slice(0,4);return c.find(t=>String(yearOf(t))===y)||c.sort((a,b)=>a.start<b.start?1:-1)[0]}
   return null;
 }
@@ -1410,16 +1570,29 @@ async function doImport(file){
 
 /* =================== events =================== */
 document.addEventListener('click',async e=>{
+  if(S.acct&&!e.target.closest('.acct')){S.acct=false;render()}
   const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act,d=b.dataset;
   if(a==='close'&&e.target!==b)return;
   switch(a){
     case 'close':case 'closebtn':closeModal();render();break;
     case 'logout':await log('Signed out');ME=null;S.token=null;S.user=null;S.adm=null;SNAP=null;try{sessionStorage.removeItem('towmt-me');sessionStorage.removeItem('towmt-sess');localStorage.removeItem('towmt-sess')}catch(x){}if(BE())DB=Object.assign(emptyDB(),{settings:DB.settings});render();break;
     case 'view':if(d.v==='admin')S.adm=null;go({view:d.v,trip:null,f:'all'});break;
-    case 'year':go({year:+d.y});break;
+    case 'year':S.ovTrip=null;go({year:+d.y,view:'overview',trip:null});break;
     case 'trip':go({trip:d.id,tab:'workflow',stage:null,f:'all'});break;
     case 'goto':go({trip:d.id,tab:d.tab,f:d.f||'all',stage:d.s!==''?+d.s:null});break;
     case 'back':go({trip:null,view:'trips'});break;
+    case 'ovsel':S.ovTrip=d.id;S.view='overview';S.trip=null;render();{const el=$('.ovd');if(el&&innerWidth<900)el.scrollIntoView({behavior:'smooth',block:'start'})}break;
+    case 'attnall':S.attnAll=!S.attnAll;render();break;
+    case 'archmodal':modal(vArch(),true);break;
+    case 'acct':S.acct=!S.acct;render();break;
+    case 'admtab':S.admTab=d.t;render();break;
+    case 'adduser':modal(vAddUser(),true);break;
+    case 'pclear':Object.assign(S,{q:'',py:'',pt:'',ps:'',pr:false});render();break;
+    case 'finmode':{const t=T(d.id);if(!can('edit'))break;const on=d.m==='split';if(on===isSplit(t))break;if(!on&&DB.ledger.some(l=>l.trip===t.id&&spFor(l))&&!confirm('Switch back to Team pool? Expenses marked for selected people will be shared by everyone again (the markings are kept if you switch back).'))break;P(t).split=on;save();log('Finance mode',`${t.dest}: ${on?'Split per person':'Team pool'}`);render();toast(on?'Split per person is on. Choose "Who is this for?" when adding expenses.':'Back to Team pool.');break}
+    case 'forall':{const fm=b.closest('form');fm.querySelector('.forlist').hidden=true;fm.querySelectorAll('[data-act=forall],[data-act=forsome]').forEach(x=>x.setAttribute('aria-pressed',x===b));break}
+    case 'forsome':{const fm=b.closest('form');fm.querySelector('.forlist').hidden=false;fm.querySelectorAll('[data-act=forall],[data-act=forsome]').forEach(x=>x.setAttribute('aria-pressed',x===b));break}
+    case 'forteam':{const fm=b.closest('form'),bx=[...fm.querySelectorAll(`input[name=sp][data-team="${d.g}"]`)],on=!bx.every(x=>x.checked);bx.forEach(x=>x.checked=on);break}
+    case 'splitrefund':{const t=T(d.id),k=splitCalc(t),m={};k.rows.forEach(x=>m[x.r.id]=Math.max(0,x.bal));modal(vSurplus(t,m),true);break}
     case 'eye':{const i=$('#lp'),sh=i.type==='password';i.type=sh?'text':'password';b.setAttribute('aria-label',sh?'Hide password':'Show password');b.classList.toggle('on',sh);i.focus();break}
     case 'stage':S.stage=+d.s;S.tab='workflow';render();break;
     case 'tab':S.tab=d.t;S.f='all';render();break;
@@ -1513,22 +1686,22 @@ document.addEventListener('submit',async e=>{
     else{const u=me();if(await sha(u.salt+v.pw)===u.hash){ok={ic:r.ic,passport:r.passport};await log('Viewed full IC',lbl)}else{$('#rerr').textContent='Wrong password.';log('Failed IC unlock',r.name);return}}
     S.revealed[id]=ok;modal(vProfile(id));clearTimeout(S.revealT);S.revealT=setTimeout(()=>{S.revealed={};const sh=$('#modal form[data-form=regedit]');if($('#modal .sheet')&&!sh)modal(vProfile(id))},30000);return}
   if(k==='pay'){const r=REG(f.dataset.id);DB.ledger.push({id:uid(),trip:r.trip,date:v.date,dir:'in',cat:'Participant contribution',desc:'Payment',amount:num(v.amount),pid:r.id,paidBy:'',status:'Paid',ref:v.ref});save();log('Recorded payment',`${r.name} ${rm(v.amount)}`);modal(vProfile(r.id));render();return}
-  if(k==='ledger'){const t=T(f.dataset.id);const rec={trip:t.id,date:v.date,dir:v.dir,cat:v.cat,desc:v.desc,amount:num(v.amount),pid:v.pid||'',paidBy:v.dir==='out'?v.paidBy:'',status:v.dir==='out'?v.status:'Paid',ref:v.ref||'',receipt:v.receipt||''};
+  if(k==='ledger'){const t=T(f.dataset.id);const rec={trip:t.id,date:v.date,dir:v.dir,cat:v.cat,desc:v.desc,amount:num(v.amount),pid:v.pid||'',paidBy:v.dir==='out'?v.paidBy:'',status:v.dir==='out'?v.status:'Paid',ref:v.ref||'',receipt:v.receipt||'',split:(()=>{const fl=f.querySelector('.forlist');if(!fl||fl.hidden||v.dir!=='out')return '';return [...f.querySelectorAll('input[name=sp]:checked')].map(x=>x.value)})()};
     if(f.dataset.l)Object.assign(DB.ledger.find(l=>l.id===f.dataset.l),rec);else DB.ledger.push({id:uid(),...rec});save();log(f.dataset.l?'Edited finance entry':'Added finance entry',`${t.dest} ${yearOf(t)}: ${v.cat} ${rm(v.amount)}`);closeModal();render();return}
   if(k==='withdraw'){const t=T(f.dataset.id);const rec={trip:t.id,pid:v.pid,date:v.date,scenario:v.scenario,comp:v.comp,reason:v.reason,paid:num(v.paid),nonrec:num(v.nonrec),fee:0,choice:v.choice,status:v.status};
     if(f.dataset.w)Object.assign(DB.withdrawals.find(w=>w.id===f.dataset.w),rec);else DB.withdrawals.push({id:uid(),...rec});REG(v.pid).status='Withdrawn';save();log('Recorded withdrawal',`${REG(v.pid).name} (${t.dest} ${yearOf(t)})`);closeModal();go({trip:t.id,tab:'withdrawals'});return}
-  if(k==='trip'){let id=f.dataset.id;const data={dest:v.dest.trim(),country:v.country.trim(),overseas:v.overseas==='1',start:v.start,end:v.end,fee:num(v.fee),deposit:num(v.deposit),status:v.status,cancelReason:v.status==='Cancelled'?v.cancelReason:''};
+  if(k==='trip'){let id=f.dataset.id;const data={dest:v.dest.trim(),country:v.country.trim(),overseas:v.overseas==='1',start:v.start,end:v.end,fee:num(v.fee),deposit:num(v.deposit),status:v.status,cancelReason:v.status==='Cancelled'?v.cancelReason:'',formCode:(v.formCode||'').trim()};
     if(id){Object.assign(T(id),data)}else{id=(v.id||`${v.start.slice(0,4)}-${data.dest.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase()}`).trim();if(T(id))id+='-'+uid().slice(0,2).toUpperCase();
       DB.trips.push({id,...data,pic:'',apic:'',mealMode:data.overseas?'Allowance':'Actual bill',media:''});DB.check[id]={};DB.due[id]={};STAGES.forEach((_,s)=>DB.due[id][s]=sugDue(T(id),s))}
     autoLink();save();log(f.dataset.id?'Edited trip':'Created trip',id);closeModal();go({trip:id,tab:'workflow',stage:null});return}
-  if(k==='arch'){const a={y:+v.y,trips:+v.trips,pax:+v.pax,funds:num(v.funds),dest:v.dest};const i=DB.archive.findIndex(x=>+x.y===a.y);if(i>=0)DB.archive[i]=a;else DB.archive.push(a);save();log('Saved past-year totals',String(a.y));render();return}
+  if(k==='arch'){const a={y:+v.y,trips:+v.trips,pax:+v.pax,funds:num(v.funds),dest:v.dest};const i=DB.archive.findIndex(x=>+x.y===a.y);if(i>=0)DB.archive[i]=a;else DB.archive.push(a);save();log('Saved past-year totals',String(a.y));closeModal();render();return}
   if(k==='access'){const id=f.dataset.u,trips=[...f.querySelectorAll('input[name=trip]:checked')].map(x=>x.value),acc={role:v.role,access:v.access==='View'?'View':'Edit',trips:v.role==='PIC'?trips:[],email:(v.email||'').trim()};
     if(BE()){try{await api('setaccess',Object.assign({id},acc));closeModal();S.adm=null;render()}catch(err){alert(err.message)}return}
     const u=DB.users.find(x=>x.id===id);if(u){Object.assign(u,acc);save();log('Changed access',`${id}: ${acc.role}`)}closeModal();render();return}
   if(k==='user'||k==='setup'){v.id=cleanId(v.id);if(!v.id){alert('Please enter a User ID using letters or numbers, e.g. mary.tan');return}}
   if(k==='user'){v.trips=v.role==='PIC'?[...f.querySelectorAll('input[name=trip]:checked')].map(x=>x.value):[];v.access=v.access==='View'?'View':'Edit';
     if(v.role==='PIC'&&!v.trips.length&&DB.trips.length&&!confirm('No trip ticked. This PIC will see nothing until you assign a trip. Add anyway?'))return}
-  if(k==='user'&&BE()){try{await api('adduser',{id:v.id,name:v.name,role:v.role,pw:v.pw,trips:v.trips,access:v.access,email:(v.email||'').trim()});S.adm=await api('admin');render();modal(vWelcome(v,v.pw),true)}catch(err){alert(err.message)}return}
+  if(k==='user'&&BE()){try{await api('adduser',{id:v.id,name:v.name,role:v.role,pw:v.pw,trips:v.trips,access:v.access,email:(v.email||'').trim()});S.adm=await api('admin');closeModal();render();modal(vWelcome(v,v.pw),true)}catch(err){alert(err.message)}return}
   if(k==='user'){if(DB.users.find(u=>u.id.toLowerCase()===v.id.toLowerCase())){alert('That user ID already exists.');return}const salt=uid();DB.users.push({id:v.id,name:v.name,role:v.role,salt,hash:await sha(salt+v.pw),created:new Date().toISOString(),trips:v.trips,access:v.access});save();log('Added user',`${v.id} (${v.role})`);render();modal(vWelcome(v,v.pw),true);return}
   if(k==='settings'){const was=BE();if(!BACKEND_URL)DB.settings.backend=(v.backend||'').trim();DB.settings.driveRoot=v.driveRoot.trim();DB.priv=DB.priv||{};DB.priv.mediaRoot=v.driveRoot.trim();await log('Changed settings');
     if(BE()!==was){try{localStorage.setItem(STORE,JSON.stringify(BE()?{settings:DB.settings}:Object.assign(emptyDB(),{settings:DB.settings})))}catch(x){}alert(BE()?'Connected. Sign in with your Google Sheet user account.':'Disconnected from Google Sheet.');ME=null;S.token=null;S.user=null;SNAP=null;try{sessionStorage.clear()}catch(x){}load();render();return}
@@ -1540,6 +1713,7 @@ document.addEventListener('change',e=>{
   const el=e.target;
   if(el.dataset.imp!==undefined&&el.files[0]){doImport(el.files[0]).catch(err=>{$('#impres').textContent='Could not read that file: '+err.message});return}
   if(el.hasAttribute('data-lf')){S.lf=el.value;render();return}
+  if(el.dataset.pf){const k=el.dataset.pf;if(k==='year'){S.year=+el.value;S.ovTrip=null}else S[k]=el.type==='checkbox'?el.checked:el.value;render();return}
   if(el.hasAttribute('data-dir')){const f=el.closest('form');const t=T(f.dataset.id);const l=f.dataset.l?{...DB.ledger.find(x=>x.id===f.dataset.l)}:{date:f.date.value,desc:f.desc.value,amount:f.amount.value};l.dir=el.value;l.cat=(el.value==='in'?IN_CATS:OUT_CATS)[0];l.paidBy=l.paidBy||'Church account';l.status=l.status||'Paid';const id=l.id;modal(vLedgerForm(t,l),true);if(id)$('#modal form').dataset.l=id;return}
   if(el.hasAttribute('data-calc')){const f=el.closest('form');f.refund.value=wRefund({scenario:f.scenario.value,paid:f.paid.value,nonrec:f.nonrec.value});return}
   if(el.dataset.up&&el.files&&el.files[0]){const [tid,key,o]=el.dataset.up.split('|');uploadFile(T(tid),key,el.files[0],o==='1');return}
@@ -1552,8 +1726,11 @@ document.addEventListener('change',e=>{
   else if(p[0]==='detail'){S.rmk=null;const c=(DB.check[p[1]]=DB.check[p[1]]||{});c[p[2]]=Object.assign(c[p[2]]||{},{detail:el.value})}
   else if(p[0]==='due'){(DB.due[p[1]]=DB.due[p[1]]||{})[p[2]]=el.value}
   else if(p[0]==='list'){const t=T(p[1]);const L=t[p[2]]=t[p[2]]||[];if(L[+p[3]])L[+p[3]][p[4]]=p[4]==='amt'?num(el.value):p[4]==='name'?properName(el.value):el.value}
+  else if(p[0]==='linkset'){if(!can('admin'))return;DB.forms=DB.forms||{};DB.forms[p[1]]=p[1]==='advanceOnly'?el.value==='1':el.value;log('Changed registration linking',p[1]);save();render();toast('Saved. Re-checking registrations…');
+    setTimeout(async()=>{try{await flush();await loadRemote();const n=autoLink();if(n)save();render();const left=DB.regs.filter(r=>!T(r.trip)).length;toast(left?`${left} registration${left>1?'s':''} still not linked`:'All registrations are linked')}catch(e){}},900);return}
   else if(p[0]==='regform'){if(!can('all'))return;DB.forms=DB.forms||{};DB.forms.regform=el.value.trim();log('Changed registration form link','')}
   else if(p[0]==='formlink'){DB.forms=DB.forms||{};DB.forms[p[1]]=el.value.trim();log('Changed form link',FORMS[p[1]].title)}
+  else if(p[0]==='trip'&&p[2]==='formCode'){const t=T(p[1]);t.formCode=el.value.trim();const n=autoLink();if(n)toast(`${n} registration${n>1?'s':''} linked to ${t.dest}`)}
   else if(p[0]==='trip'){const t=T(p[1]);if(['pic','apic'].includes(p[2]))el.value=properName(el.value);t[p[2]]=['fee','deposit','mealB','mealL','mealD','budgetPax'].includes(p[2])?num(el.value):['surplusAmt','surplusPax'].includes(p[2])?(el.value===''?'':num(el.value)):el.value;if((p[2]==='pic'||p[2]==='apic')&&el.value){const c=(DB.check[t.id]=DB.check[t.id]||{});c[p[2]]={done:true,by:(me()||{}).id}}}
   else if(p[0]==='role'){const r=REG(p[1]);r.role=el.value==='Other'?(ROLES.includes(r.role)||!r.role?'Other':r.role):el.value}
   else if(p[0]==='reg'){REG(p[1])[p[2]]=el.value}
@@ -1572,7 +1749,7 @@ document.addEventListener('input',e=>{
   const r=el.dataset.rep;if(!r)return;const [id,k]=r.split('|');(DB.reports[id]=DB.reports[id]||{})[k]=el.value;
   clearTimeout(tmr);tmr=setTimeout(()=>{save();const s=$('#saved');if(s)s.textContent='Report saved'},500);
 });
-document.addEventListener('toggle',e=>{if(e.target.hasAttribute&&e.target.hasAttribute('data-hist')){S.histOpen=e.target.open;return}if(e.target.hasAttribute&&e.target.hasAttribute('data-flow')){S.flowOpen=e.target.open;try{localStorage.setItem('towmt-flow',S.flowOpen?'1':'0')}catch(x){}}},true);
+document.addEventListener('toggle',e=>{if(e.target.hasAttribute&&e.target.hasAttribute('data-yrs')){S.yrsOpen=e.target.open;return}if(e.target.hasAttribute&&e.target.hasAttribute('data-hist')){S.histOpen=e.target.open;return}if(e.target.hasAttribute&&e.target.hasAttribute('data-flow')){S.flowOpen=e.target.open;try{localStorage.setItem('towmt-flow',S.flowOpen?'1':'0')}catch(x){}}},true);
 try{if(localStorage.getItem('towmt-flow')==='0')S.flowOpen=false}catch(e){}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.hasAttribute&&e.target.hasAttribute('data-rmk')){e.preventDefault();e.target.blur();return}if(e.key==='Escape'&&S.rmk){S.rmk=null;render();return}if(e.key==='Escape'&&$('#modal').innerHTML){closeModal();render()}});
 
