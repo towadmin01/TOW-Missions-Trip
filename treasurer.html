@@ -50,7 +50,7 @@ const LOGO='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEIAAABgCAYAAACpMKTVAA
 const P=new URLSearchParams(location.search),TRIP=P.get('trip')||'',KEY=P.get('key')||'';
 let API='';try{API=atob(P.get('api')||'')}catch(e){}
 const SK='towt-'+TRIP;
-const IN=['Love gift from local church','Sponsorship','Funds received from PIC','Other income'];
+const IN=['Funds received from church','Love gift from local church','Sponsorship','Other income'];
 const OUT=['Meals - allowance','Meals - actual bill','Transport - vehicle rental','Transport - taxi/Grab','Accommodation','Love gift to local church','Ministry materials','Luggage','Others'];
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
