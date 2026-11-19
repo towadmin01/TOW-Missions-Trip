@@ -439,7 +439,7 @@ tr.cancel td{color:var(--muted)}
 
 .xfer{color:var(--muted);font-style:italic;white-space:nowrap;cursor:help}
 
-.wdp{border-left:3px solid var(--amber)}.wdp td:nth-child(3){min-width:200px}.wdp td:first-child{white-space:nowrap}.wdp.done{border-left-color:var(--green)}
+.wdp{border-left:3px solid var(--amber)}.wdp td:nth-child(3){min-width:200px}.wdp td:first-child{white-space:nowrap}.wbd{margin-top:6px;min-width:220px}.wbd summary{cursor:pointer;color:var(--accent,#9a7b3c);font-weight:600}.wbd table{margin:6px 0;width:100%;max-width:380px}.wbd td,.wbd th{padding:3px 6px}.wdp.done{border-left-color:var(--green)}
 </style>
 </head>
 <body>
@@ -656,21 +656,28 @@ const WD_CATS=['Withdrawal refund','Donation to Mission Fund'];
 // of what has been spent so far (shared costs ÷ people the costs were made for). A typed non-recoverable amount always wins.
 function wPropose(t,w){const r=REG(w.pid),own=r?paidOf(r):0,assumed=!(+w.paid>0)&&!own&&+t.fee>0,paid=+w.paid>0?+w.paid:own||(+t.fee||0);
   if(w.scenario==='A')return {paid,nonrec:paid,refund:0,out:0,est:false,basis:'Scenario A: nothing collected'};
-  let nonrec=+w.nonrec||0,est=false,basis='Non-recoverable amount entered';
+  let nonrec=+w.nonrec||0,est=false,basis='Non-recoverable amount entered',bd=[],heads=0;
   if(!(+w.nonrec>0)&&w.scenario!=='B'){const L=DB.ledger.filter(l=>l.trip===t.id&&l.dir==='out'&&!CLOSE_CATS.includes(l.cat)&&!WD_CATS.includes(l.cat)&&!(Array.isArray(l.split)&&l.split.length));
-    const shared=L.reduce((a,l)=>a+(+l.amount||0),0),heads=conf(t).length+DB.withdrawals.filter(x=>x.trip===t.id&&x.scenario!=='A'&&x.scenario!=='B').length;
-    nonrec=heads?Math.min(paid,shared/heads):0;est=true;basis=`Estimate: ${rm(shared)} shared costs so far ÷ ${heads} people`}
+    const g={};L.forEach(l=>{g[l.cat]=(g[l.cat]||0)+(+l.amount||0)});
+    const shared=L.reduce((a,l)=>a+(+l.amount||0),0);heads=conf(t).length+DB.withdrawals.filter(x=>x.trip===t.id&&x.scenario!=='A'&&x.scenario!=='B').length;
+    nonrec=heads?Math.min(paid,shared/heads):0;est=true;bd=Object.entries(g).sort((a,b)=>b[1]-a[1]).map(([cat,amt])=>({cat,amt,share:heads?amt/heads:0,n:L.filter(l=>l.cat===cat).length}));basis=`Estimate: ${rm(shared)} shared costs so far ÷ ${heads} people`}
   if(w.scenario==='B'&&!(+w.nonrec>0)){nonrec=0;basis='Scenario B: nothing spent yet, full refund'}
   const refund=Math.max(0,Math.round((paid-nonrec)*100)/100);
   if(assumed)basis+=` · paid amount assumed = trip fee ${rm(t.fee)} (enter the actual amount in the Withdrawals tab if different)`;
-  return {paid,nonrec:Math.round(nonrec*100)/100,refund,out:w.choice==='-'?0:refund,est,basis,donate:/donat/i.test(w.choice||'')}}
+  return {paid,nonrec:Math.round(nonrec*100)/100,refund,out:w.choice==='-'?0:refund,est,basis,bd,heads,capped:bd.length&&heads&&bd.reduce((a,x)=>a+x.share,0)>paid+0.005,donate:/donat/i.test(w.choice||'')}}
+function wBreak(p){if(!p.bd||!p.bd.length)return '';
+  return `<details class="wbd"><summary>Breakdown of non-recoverable</summary><table class="sm"><thead><tr><th>Cost</th><th class="num">Total</th><th class="num">÷ ${p.heads}</th></tr></thead><tbody>
+  ${p.bd.map(x=>`<tr><td>${esc(x.cat)}${x.n>1?` <span class="muted">(${x.n} entries)</span>`:''}</td><td class="num">${rm(x.amt)}</td><td class="num">${rm(x.share)}</td></tr>`).join('')}
+  <tr class="total"><td>Their share</td><td class="num">${rm(p.bd.reduce((a,x)=>a+x.amt,0))}</td><td class="num">${rm(p.bd.reduce((a,x)=>a+x.share,0))}</td></tr>
+  ${p.capped?`<tr><td colspan="3" class="muted">Capped at what they paid (${rm(p.paid)}).</td></tr>`:''}</tbody></table>
+  <div class="muted">Spending shared by the ${p.heads} people the costs were made for (confirmed participants plus withdrawals under C/E). Close-out items and costs for named people only are left out.</div></details>`}
 function wdPanel(t){const W=DB.withdrawals.filter(w=>w.trip===t.id);if(!W.length)return '';const open=W.filter(w=>w.posted!=='Yes'),ended=new Date(t.end)<TODAY,ed=can('edit');
   const tot=open.reduce((a,w)=>a+wPropose(t,w).out,0);
   return `<div class="panel wdp ${open.length?'':'done'}"><div class="stephead"><h2 style="margin:0">Withdrawals ${open.length?`<span class="badge b-amber">${open.length} not yet in entries</span>`:'<span class="badge b-green">added to entries</span>'}</h2>
   ${ed&&open.length?`<button class="btn sm ${ended?'pri':''}" data-act="wdpost" data-id="${t.id}">${ended?'Confirm & add to entries':'Add to entries now'}</button>`:''}</div>
   ${open.length?`<p class="small muted" style="margin-top:-4px">${ended?'The trip has ended. Check the amounts, change any in the Withdrawals tab if needed, then add them with one click.':`Proposed amounts update as spending is recorded. They're set aside from the balance but not added as entries until the trip ends (${fd(t.end)}).`}</p>`:''}
   <div class="tbl"><table class="sm"><thead><tr><th>Name</th><th>Scenario</th><th>Remarks</th><th class="num">Paid</th><th class="num">Non-recoverable</th><th class="num">Refund</th><th>Choice</th><th>Status</th></tr></thead><tbody>
-  ${W.map(w=>{const p=wPropose(t,w);return `<tr><td>${esc((REG(w.pid)||{}).name||'—')}</td><td>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</td><td class="small">${esc(w.reason||'')}<div class="muted">${esc(p.basis)}</div></td><td class="num">${rm(p.paid)}</td><td class="num">${rm(p.nonrec)}${p.est&&w.posted!=='Yes'?' <span class="badge b-grey">est.</span>':''}</td><td class="num"><b>${rm(p.refund)}</b></td><td>${esc(w.choice||'')}</td><td>${w.posted==='Yes'?`<span class="badge b-green">${esc(w.status||'Added')}</span>`:'<span class="badge b-amber">Proposed</span>'}</td></tr>`}).join('')}
+  ${W.map(w=>{const p=wPropose(t,w);return `<tr><td>${esc((REG(w.pid)||{}).name||'—')}</td><td>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</td><td class="small">${esc(w.reason||'')}<div class="muted">${esc(p.basis)}</div>${w.posted!=='Yes'?wBreak(p):''}</td><td class="num">${rm(p.paid)}</td><td class="num">${rm(p.nonrec)}${p.est&&w.posted!=='Yes'?' <span class="badge b-grey">est.</span>':''}</td><td class="num"><b>${rm(p.refund)}</b></td><td>${esc(w.choice||'')}</td><td>${w.posted==='Yes'?`<span class="badge b-green">${esc(w.status||'Added')}</span>`:'<span class="badge b-amber">Proposed</span>'}</td></tr>`}).join('')}
   ${open.length>0?`<tr class="total"><td colspan="5">Set aside for open withdrawals</td><td class="num">${rm(tot)}</td><td colspan="2"></td></tr>`:''}</tbody></table></div></div>`}
 function finance(t){
   const A=DB.ledger.filter(l=>l.trip===t.id),L=A.filter(l=>!isXfer(l)),X=A.filter(isXfer);
@@ -1270,7 +1277,7 @@ function tWithdraw(t){
   <details class="panel flow" open><summary>Withdrawal process</summary><div class="flowwrap">${FLOW_WD}</div></details>
   <div class="panel"><div class="stephead"><h2>Withdrawals for this trip</h2>${can('edit')?`<button class="btn sm pri" data-act="withdraw" data-id="${t.id}">Record withdrawal</button>`:''}</div>
   <div class="tbl"><table class="policy"><thead><tr><th>Name</th><th>Notified</th><th>Scenario</th><th>Reason</th><th class="num">Amount paid</th><th class="num">Non-recoverable</th><th class="num">Refund</th><th>Choice</th><th>Status</th>${can('edit')?'<th></th>':''}</tr></thead><tbody>
-  ${W.map(w=>`<tr><td>${esc((REG(w.pid)||{}).name||'—')}</td><td>${fd(w.date)}</td><td><b>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</b></td><td>${esc(w.reason)}</td>${(()=>{const p=wPropose(t,w);return `<td class="num">${rm(p.paid)}</td><td class="num">${rm(p.nonrec)}${p.est&&w.posted!=='Yes'?' <span class="badge b-grey">est.</span>':''}</td><td class="num"><b>${rm(p.refund)}</b></td>`})()}<td>${esc(w.choice)}</td><td>${w.posted==='Yes'?esc(w.status):'<span class="badge b-amber">Proposed</span>'}</td>${can('edit')?`<td><button class="link small" data-act="withdraw" data-id="${t.id}" data-w="${w.id}">Edit</button></td>`:''}</tr>`).join('')||'<tr><td colspan="10" class="empty">No one has withdrawn from this trip.</td></tr>'}
+  ${W.map(w=>`<tr><td>${esc((REG(w.pid)||{}).name||'—')}</td><td>${fd(w.date)}</td><td><b>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</b></td><td class="small">${esc(w.reason)}${w.posted!=='Yes'?wBreak(wPropose(t,w)):''}</td>${(()=>{const p=wPropose(t,w);return `<td class="num">${rm(p.paid)}</td><td class="num">${rm(p.nonrec)}${p.est&&w.posted!=='Yes'?' <span class="badge b-grey">est.</span>':''}</td><td class="num"><b>${rm(p.refund)}</b></td>`})()}<td>${esc(w.choice)}</td><td>${w.posted==='Yes'?esc(w.status):'<span class="badge b-amber">Proposed</span>'}</td>${can('edit')?`<td><button class="link small" data-act="withdraw" data-id="${t.id}" data-w="${w.id}">Edit</button></td>`:''}</tr>`).join('')||'<tr><td colspan="10" class="empty">No one has withdrawn from this trip.</td></tr>'}
   ${W.length?`<tr class="total"><td colspan="4">Total</td><td class="num">${rm(W.reduce((a,w)=>a+wPropose(t,w).paid,0))}</td><td class="num">${rm(W.reduce((a,w)=>a+wPropose(t,w).nonrec,0))}</td><td class="num">${rm(W.reduce((a,w)=>a+wPropose(t,w).refund,0))}</td><td colspan="${can('edit')?3:2}"></td></tr>`:''}
   </tbody></table></div></div>`;
 }
