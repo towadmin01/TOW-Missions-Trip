@@ -40,6 +40,9 @@ td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
 .tiny{font-size:12px;color:var(--muted);margin-top:8px}
 .seg.three{grid-template-columns:repeat(auto-fit,minmax(90px,1fr))}
 .plist{display:flex;flex-wrap:wrap;gap:6px 14px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;max-height:200px;overflow:auto}
+.lnk{background:none;border:0;padding:0;color:var(--gold-ink);font-weight:700;font-size:12px;text-decoration:underline;cursor:pointer;width:auto;margin:0}
+.editing{outline:2px solid var(--gold)}.edhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.edhead .lnk{font-size:14px}
+.btn.del{background:none;color:var(--red);border:1px solid var(--red);margin-top:8px}
 .pk{display:flex;gap:6px;align-items:center;font-weight:500;margin:0;font-size:14px}.pk input{width:18px;height:18px;padding:0}
 </style>
 </head>
@@ -58,7 +61,8 @@ const rm=n=>'RM'+(Math.round((+n||0)*100)/100).toLocaleString('en-MY',{maximumFr
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
 let S={name:'',info:null,entries:[]};try{S=Object.assign(S,JSON.parse(localStorage.getItem(SK)||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
-let dir='out',busy=false,msg='',forMode='',forSel=new Set();
+let dir='out',busy=false,msg='',forMode='',forSel=new Set(),editId='',fill=false,formDir='';
+const live=()=>S.entries.filter(e=>!e.del);
 
 async function call(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error);return j}
 async function sync(){
@@ -66,7 +70,13 @@ async function sync(){
   try{
     S.info=await call({action:'tInfo',trip:TRIP,key:KEY});save();
     const q=S.entries.filter(e=>!e.sent);
-    if(q.length){const j=await call({action:'tEntry',trip:TRIP,key:KEY,name:S.name,entries:q.map(({sent,...e})=>e)});(j.saved||[]).forEach(id=>{const e=S.entries.find(x=>x.id===id);if(e)e.sent=true});save();msg=''}
+    if(q.length){const j=await call({action:'tEntry',trip:TRIP,key:KEY,name:S.name,entries:q.map(({sent,dirty,del,orig,locked,...e})=>e)});(j.saved||[]).forEach(id=>{const e=S.entries.find(x=>x.id===id);if(e){e.sent=true;e.dirty=false;delete e.orig}});save();msg=''}
+    // changes to entries that were already sent
+    const ch=S.entries.filter(e=>e.sent&&(e.dirty||e.del));
+    if(ch.length){const j=await call({action:'tEdit',trip:TRIP,key:KEY,name:S.name,edits:ch.map(e=>e.del?{id:e.id,del:true}:{id:e.id,entry:snap(e)})});
+      (j.done||[]).forEach(id=>{const e=S.entries.find(x=>x.id===id);if(!e)return;if(e.del)S.entries=S.entries.filter(x=>x!==e);else{e.dirty=false;delete e.orig}});
+      (j.skipped||[]).forEach(k=>{const e=S.entries.find(x=>x.id===k.id);if(!e)return;if(e.orig)Object.assign(e,e.orig);delete e.orig;e.dirty=false;e.del=false;e.locked=true;msg=k.why==='not a link entry'?'One change could not be saved because the entry is not from this link.':k.why});
+      save()}
   }catch(e){msg=(e instanceof TypeError||/fetch|network|load failed/i.test(e.message))?'':e.message}
   busy=false;render();
 }
@@ -74,9 +84,13 @@ async function sync(){
 function forUI(){const I=S.info,mode=forMode||(I.me?'me':'all');
   return `<label>Who is this for?</label><div class="seg three"><button type="button" data-f="all" aria-pressed="${mode==='all'}">Everyone</button>${I.me?`<button type="button" data-f="me" aria-pressed="${mode==='me'}">Just me</button>`:''}<button type="button" data-f="some" aria-pressed="${mode==='some'}">Choose people</button></div>
   ${mode==='some'?`<div class="plist">${(I.people||[]).map(p=>`<label class="pk"><input type="checkbox" value="${esc(p.id)}" ${forSel.has(p.id)?'checked':''}> ${esc(p.name)}</label>`).join('')}</div>`:''}`}
+const clearForm=()=>{const f=$('#ef');if(f)f.remove()};
+const snap=e=>({date:e.date,dir:e.dir,cat:e.cat,desc:e.desc,amount:e.amount,paidBy:e.paidBy,split:e.split});
 const nameOf=id=>((S.info&&S.info.people||[]).find(p=>p.id===id)||{}).name||'1 person';
 function render(){
   const app=$('#app');
+  // keep whatever is half-typed when the page refreshes itself (auto-sync every 30s)
+  const keep=$('#ef')&&!fill?['dt','ct','ds','am','pb'].reduce((o,k)=>{const el=$('#'+k);if(el)o[k]=el.value;return o},{}):null,keepDir=formDir;
   const head=`<header><img src="${LOGO}" alt=""><b>TOW Mission Entries</b></header>
    <div class="trip">${S.info?esc(S.info.title):esc(TRIP)} <span class="net ${navigator.onLine?'on':'off'}">${navigator.onLine?'Online':'Offline: entries are kept on this phone'}</span></div>`;
   if(!TRIP||!KEY||!API){app.innerHTML=head+'<div class="warn">This link is incomplete. Ask the trip PIC for the treasurer link again.</div>';return}
@@ -85,9 +99,9 @@ function render(){
   if(!S.name&&!S.info&&navigator.onLine&&!msg){app.innerHTML=head+'<div class="card note">Loading…</div>';return}
   if(!S.name){app.innerHTML=head+`<div class="card"><p>Enter your name once. It is shown next to every entry you record.</p><form id="nf"><label for="nm">Your name</label><input id="nm" required autocomplete="name"><button class="btn">Start</button></form></div>`;
     $('#nf').onsubmit=e=>{e.preventDefault();S.name=$('#nm').value.trim();save();render();sync()};return}
-  const list=[...S.entries].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.t-b.t);let bal=0;
-  const inn=list.filter(e=>e.dir==='in').reduce((a,e)=>a+e.amount,0),out=list.filter(e=>e.dir==='out').reduce((a,e)=>a+e.amount,0),q=list.filter(e=>!e.sent).length;
-  app.innerHTML=head+`<div class="card"><form id="ef">
+  const list=live().sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.t-b.t);let bal=0;
+  const inn=list.filter(e=>e.dir==='in').reduce((a,e)=>a+e.amount,0),out=list.filter(e=>e.dir==='out').reduce((a,e)=>a+e.amount,0),q=S.entries.filter(e=>!e.sent||e.dirty||e.del).length,ed=editId&&S.entries.find(e=>e.id===editId);
+  app.innerHTML=head+`<div class="card${ed?' editing':''}">${ed?`<div class="edhead"><b>Fixing an entry</b><button type="button" class="lnk" id="cx">Cancel</button></div>`:''}<form id="ef">
     <div class="seg"><button type="button" data-d="out" aria-pressed="${dir==='out'}">Money out</button><button type="button" data-d="in" aria-pressed="${dir==='in'}">Money in</button></div>
     <label for="dt">Date</label><input id="dt" type="date" value="${today()}" required>
     <label for="ct">Category</label><select id="ct">${(dir==='in'?IN:OUT).map(c=>`<option>${c}</option>`).join('')}</select>
@@ -95,20 +109,33 @@ function render(){
     <label for="am">Amount (RM)</label><input id="am" type="number" inputmode="decimal" step="0.01" min="0.01" required>
     ${dir==='out'&&S.info&&S.info.split?forUI():''}
     ${dir==='out'?`<label for="pb">Paid from</label><select id="pb"><option value="Team treasurer">Team cash (treasurer)</option><option value="Personal (claim)">Paid personally, to claim back</option></select>`:''}
-    <button class="btn">Save entry</button></form>
+    <button class="btn">${ed?'Save changes':'Save entry'}</button>${ed?`<button type="button" class="btn del" id="dl">Delete this entry</button>`:''}</form>
     ${msg?`<p class="tiny" style="color:var(--red)">${esc(msg)}</p>`:''}</div>
    <div class="card"><div class="sum"><div><span>In</span><b>${rm(inn)}</b></div><div><span>Out</span><b>${rm(out)}</b></div><div><span>Balance</span><b>${rm(inn-out)}</b></div></div>
     <p class="tiny">${q?`${q} entr${q>1?'ies':'y'} waiting to send. They send automatically when you are back online.`:'All entries sent to the church records.'}</p>
     <table><thead><tr><th>Date</th><th>Description</th><th class="num">In</th><th class="num">Out</th><th class="num">Balance</th></tr></thead><tbody>
-    ${list.map(e=>{bal+=(e.dir==='in'?1:-1)*e.amount;return `<tr><td>${e.date.slice(5)}</td><td>${esc(e.desc)}<br><span class="note">${esc(e.cat)}${e.paidBy==='Personal (claim)'?' · personal claim':''}${Array.isArray(e.split)&&e.split.length?' · for '+(e.split.length===1?esc(nameOf(e.split[0])):e.split.length+' people'):''}</span> <span class="${e.sent?'s':'q'}">${e.sent?'Sent':'Waiting'}</span></td><td class="num">${e.dir==='in'?rm(e.amount):''}</td><td class="num">${e.dir==='out'?rm(e.amount):''}</td><td class="num">${rm(bal)}</td></tr>`}).reverse().join('')||'<tr><td colspan="5" class="note">No entries yet.</td></tr>'}
-    </tbody></table><p class="tiny">Recording as ${esc(S.name)}. Keep every receipt. Pay from team cash so no one needs to claim later.</p><p class="tiny"><b>Tip:</b> add this page to your home screen (Share or ⋮ menu → Add to Home Screen) so it opens even with no signal.</p></div>`;
+    ${list.map(e=>{bal+=(e.dir==='in'?1:-1)*e.amount;return `<tr><td>${e.date.slice(5)}</td><td>${esc(e.desc)}<br><span class="note">${esc(e.cat)}${e.paidBy==='Personal (claim)'?' · personal claim':''}${Array.isArray(e.split)&&e.split.length?' · for '+(e.split.length===1?esc(nameOf(e.split[0])):e.split.length+' people'):''}</span> <span class="${e.sent&&!e.dirty?'s':'q'}">${!e.sent?'Waiting':e.dirty?'Change waiting':'Sent'}</span>${e.locked?'':` <button type="button" class="lnk" data-e="${e.id}">Edit</button>`}</td><td class="num">${e.dir==='in'?rm(e.amount):''}</td><td class="num">${e.dir==='out'?rm(e.amount):''}</td><td class="num">${rm(bal)}</td></tr>`}).reverse().join('')||'<tr><td colspan="5" class="note">No entries yet.</td></tr>'}
+    </tbody></table><p class="tiny">Typed something wrong? Tap <b>Edit</b> next to the entry to fix or delete it. Once the church has settled a claim, ask the PIC to change it instead.</p><p class="tiny">Recording as ${esc(S.name)}. Keep every receipt. Pay from team cash so no one needs to claim later.</p><p class="tiny"><b>Tip:</b> add this page to your home screen (Share or ⋮ menu → Add to Home Screen) so it opens even with no signal.</p></div>`;
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{dir=b.dataset.d;render()});
   app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{forMode=b.dataset.f;render()});
   app.querySelectorAll('.plist input').forEach(c=>c.onchange=()=>{c.checked?forSel.add(c.value):forSel.delete(c.value)});
+  app.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const x=S.entries.find(e=>e.id===b.dataset.e);if(!x)return;editId=x.id;dir=x.dir;
+    forMode=Array.isArray(x.split)&&x.split.length?(S.info&&x.split.length===1&&x.split[0]===S.info.me?'me':'some'):'all';forSel=new Set(Array.isArray(x.split)?x.split:[]);fill=true;render();scrollTo(0,0)});
+  if(ed&&fill){$('#dt').value=ed.date;$('#ct').value=ed.cat;$('#ds').value=ed.desc;$('#am').value=ed.amount;if($('#pb'))$('#pb').value=ed.paidBy||'Team treasurer'}
+  else if(keep){Object.keys(keep).forEach(k=>{const el=$('#'+k);if(el&&!(k==='ct'&&keepDir!==dir))el.value=keep[k]})}
+  fill=false;formDir=dir;
+  if(ed){
+    $('#cx').onclick=()=>{editId='';forMode='';forSel=new Set();clearForm();render()};
+    $('#dl').onclick=()=>{if(!confirm(`Delete "${ed.desc}" (${rm(ed.amount)})?`))return;if(!ed.sent)S.entries=S.entries.filter(x=>x!==ed);else{if(!ed.orig)ed.orig=snap(ed);ed.del=true}editId='';clearForm();save();render();sync()}}
   $('#ef').onsubmit=e=>{e.preventDefault();const a=+$('#am').value;if(!(a>0))return;
+    if(ed){const sp=(()=>{if(dir!=='out'||!S.info||!S.info.split)return '';const m=forMode||(S.info.me?'me':'all');return m==='me'?[S.info.me]:m==='some'?[...forSel]:''})();
+      if(forMode==='some'&&!forSel.size){alert('Tick at least one person, or choose Everyone.');return}
+      if(ed.sent&&!ed.orig)ed.orig=snap(ed);
+      Object.assign(ed,{date:$('#dt').value,dir,cat:$('#ct').value,desc:$('#ds').value.trim(),amount:Math.round(a*100)/100,paidBy:dir==='out'?$('#pb').value:'',split:sp});if(ed.sent)ed.dirty=true;
+      editId='';forMode='';forSel=new Set();clearForm();save();render();sync();return}
     S.entries.push({id:'t'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),t:Date.now(),date:$('#dt').value,dir,cat:$('#ct').value,desc:$('#ds').value.trim(),amount:Math.round(a*100)/100,paidBy:dir==='out'?$('#pb').value:'',split:(()=>{if(dir!=='out'||!S.info||!S.info.split)return '';const m=forMode||(S.info.me?'me':'all');return m==='me'?[S.info.me]:m==='some'?[...forSel]:''})(),sent:false});
     if(forMode==='some'&&!forSel.size){S.entries.pop();alert('Tick at least one person, or choose Everyone.');return}
-    save();render();sync()};
+    clearForm();save();render();sync()};
 }
 addEventListener('online',()=>{render();sync()});addEventListener('offline',render);
 setInterval(sync,30000);
