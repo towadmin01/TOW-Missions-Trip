@@ -438,6 +438,8 @@ tr.cancel td{color:var(--muted)}
 @media (max-width:640px){.lset{grid-template-columns:1fr}.lset label{margin-top:6px}}
 
 .xfer{color:var(--muted);font-style:italic;white-space:nowrap;cursor:help}
+
+.wdp{border-left:3px solid var(--amber)}.wdp td:nth-child(3){min-width:200px}.wdp td:first-child{white-space:nowrap}.wdp.done{border-left-color:var(--green)}
 </style>
 </head>
 <body>
@@ -494,10 +496,10 @@ const BOOKS=['Reserved','Booked','Booked & paid'];
 const COND={m1_ins:t=>tmode(t)==='Flight'||t.overseas,b_air:t=>tmode(t)==='Flight',b_lug:t=>tmode(t)==='Flight',b_ins:t=>tmode(t)==='Flight'||t.overseas,b_veh:t=>tmode(t)==='Driving',b_trans:t=>!['Flight','Driving'].includes(tmode(t)),c_wd:t=>DB.withdrawals.some(w=>w.trip===t.id&&w.scenario!=='A')};
 // items the app ticks by itself
 const bookDone=k=>t=>!!(P(t).book||{})[k];
-const AUTO={pic:t=>!!t.pic,apic:t=>!!t.apic,plan_travel:t=>{const p=P(t),v=+p.vehicles||0;return p.mode==='Driving'?v>0&&!!p.claim&&(p.veh||[]).slice(0,v).filter(x=>x&&x.driver).length===v:p.mode==='Flight'?!!p.airline:!!p.mode},
+const AUTO={c_wd:t=>{const W=DB.withdrawals.filter(w=>w.trip===t.id&&w.scenario!=='A');return W.length>0&&W.every(w=>w.posted==='Yes')},pic:t=>!!t.pic,apic:t=>!!t.apic,plan_travel:t=>{const p=P(t),v=+p.vehicles||0;return p.mode==='Driving'?v>0&&!!p.claim&&(p.veh||[]).slice(0,v).filter(x=>x&&x.driver).length===v:p.mode==='Flight'?!!p.airline:!!p.mode},
   b_air:bookDone('b_air'),b_lug:bookDone('b_lug'),b_ins:bookDone('b_ins'),b_veh:bookDone('b_veh'),b_trans:bookDone('b_trans'),b_acc:bookDone('b_acc'),
   f_release:t=>+P(t).released>0,d_done:t=>!!t.end&&new Date(t.end)<TODAY};
-const AUTOTXT={pic:'ticks when a name is entered',apic:'ticks when a name is entered',plan_travel:'ticks when the plan is filled (driving: drivers and claims; flight: airline)',b_air:'· choose a status',b_lug:'· choose a status',b_ins:'· choose a status',b_veh:'· choose a status',b_trans:'· choose a status',b_acc:'· choose a status',f_release:'ticks when the amount is entered',d_done:'ticks itself after the last trip day'};
+const AUTOTXT={c_wd:'ticks when the refunds are added in Finance',pic:'ticks when a name is entered',apic:'ticks when a name is entered',plan_travel:'ticks when the plan is filled (driving: drivers and claims; flight: airline)',b_air:'· choose a status',b_lug:'· choose a status',b_ins:'· choose a status',b_veh:'· choose a status',b_trans:'· choose a status',b_acc:'· choose a status',f_release:'ticks when the amount is entered',d_done:'ticks itself after the last trip day'};
 const isDone=(t,k)=>k==='c_close'?isClosed(t):AUTO[k]?AUTO[k](t):!!chk(t,k).done;
 // suggested due dates, days from the trip start (step 9 counts from the trip end)
 // if the trip is less than ~7 months away, squeeze the steps into the time left (first step a week from today)
@@ -535,7 +537,7 @@ const IN_CATS=['Participant contribution','Love gift from local church','Sponsor
 // money moved from the church account to a treasurer: not new money, so it is left out of Money in and the balance
 const XFER_CATS=['Funds handed to treasurer','Funds received from PIC','Funds received from church'];
 const isXfer=l=>l.dir==='in'&&XFER_CATS.includes(l.cat);
-const OUT_CATS=['Surplus refund','Donation to church','Other close-out','Flights','Travel insurance','Luggage','Accommodation','Transport - vehicle rental','Transport - taxi/Grab','Meals - allowance','Meals - actual bill','Love gift to local church','Ministry materials','Visa','Others'];
+const OUT_CATS=['Surplus refund','Donation to church','Other close-out','Withdrawal refund','Donation to Mission Fund','Flights','Travel insurance','Luggage','Accommodation','Transport - vehicle rental','Transport - taxi/Grab','Meals - allowance','Meals - actual bill','Love gift to local church','Ministry materials','Visa','Others'];
 const PAIDBY=['Church account','Team treasurer','Personal (claim)'];
 const PSTAT=['Paid','Reserved','Claim pending','Claimed'];
 const PF=[
@@ -649,6 +651,27 @@ function curStage(t){for(let s=0;s<9;s++)if(!stageProg(t,s).full)return s;return
 const passportBad=(t,r)=>t.overseas&&r.passportExp&&new Date(r.passportExp)<new Date(shift(t.end,182));
 const payState=(t,r)=>{const p=paidOf(r);return p>=t.fee?['Paid in full','b-green']:p>0?['Partially paid','b-amber']:['Unpaid','b-red']};
 const wRefund=w=>w.scenario==='A'?0:Math.max(0,(+w.paid||0)-(+w.nonrec||0));
+const WD_CATS=['Withdrawal refund','Donation to Mission Fund'];
+// Estimated refund for a withdrawal. Scenario B: everything paid back. C/E/compassionate: what they paid less their share
+// of what has been spent so far (shared costs ÷ people the costs were made for). A typed non-recoverable amount always wins.
+function wPropose(t,w){const r=REG(w.pid),own=r?paidOf(r):0,assumed=!(+w.paid>0)&&!own&&+t.fee>0,paid=+w.paid>0?+w.paid:own||(+t.fee||0);
+  if(w.scenario==='A')return {paid,nonrec:paid,refund:0,out:0,est:false,basis:'Scenario A: nothing collected'};
+  let nonrec=+w.nonrec||0,est=false,basis='Non-recoverable amount entered';
+  if(!(+w.nonrec>0)&&w.scenario!=='B'){const L=DB.ledger.filter(l=>l.trip===t.id&&l.dir==='out'&&!CLOSE_CATS.includes(l.cat)&&!WD_CATS.includes(l.cat)&&!(Array.isArray(l.split)&&l.split.length));
+    const shared=L.reduce((a,l)=>a+(+l.amount||0),0),heads=conf(t).length+DB.withdrawals.filter(x=>x.trip===t.id&&x.scenario!=='A'&&x.scenario!=='B').length;
+    nonrec=heads?Math.min(paid,shared/heads):0;est=true;basis=`Estimate: ${rm(shared)} shared costs so far ÷ ${heads} people`}
+  if(w.scenario==='B'&&!(+w.nonrec>0)){nonrec=0;basis='Scenario B: nothing spent yet, full refund'}
+  const refund=Math.max(0,Math.round((paid-nonrec)*100)/100);
+  if(assumed)basis+=` · paid amount assumed = trip fee ${rm(t.fee)} (enter the actual amount in the Withdrawals tab if different)`;
+  return {paid,nonrec:Math.round(nonrec*100)/100,refund,out:w.choice==='-'?0:refund,est,basis,donate:/donat/i.test(w.choice||'')}}
+function wdPanel(t){const W=DB.withdrawals.filter(w=>w.trip===t.id);if(!W.length)return '';const open=W.filter(w=>w.posted!=='Yes'),ended=new Date(t.end)<TODAY,ed=can('edit');
+  const tot=open.reduce((a,w)=>a+wPropose(t,w).out,0);
+  return `<div class="panel wdp ${open.length?'':'done'}"><div class="stephead"><h2 style="margin:0">Withdrawals ${open.length?`<span class="badge b-amber">${open.length} not yet in entries</span>`:'<span class="badge b-green">added to entries</span>'}</h2>
+  ${ed&&open.length?`<button class="btn sm ${ended?'pri':''}" data-act="wdpost" data-id="${t.id}">${ended?'Confirm & add to entries':'Add to entries now'}</button>`:''}</div>
+  ${open.length?`<p class="small muted" style="margin-top:-4px">${ended?'The trip has ended. Check the amounts, change any in the Withdrawals tab if needed, then add them with one click.':`Proposed amounts update as spending is recorded. They're set aside from the balance but not added as entries until the trip ends (${fd(t.end)}).`}</p>`:''}
+  <div class="tbl"><table class="sm"><thead><tr><th>Name</th><th>Scenario</th><th>Remarks</th><th class="num">Paid</th><th class="num">Non-recoverable</th><th class="num">Refund</th><th>Choice</th><th>Status</th></tr></thead><tbody>
+  ${W.map(w=>{const p=wPropose(t,w);return `<tr><td>${esc((REG(w.pid)||{}).name||'—')}</td><td>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</td><td class="small">${esc(w.reason||'')}<div class="muted">${esc(p.basis)}</div></td><td class="num">${rm(p.paid)}</td><td class="num">${rm(p.nonrec)}${p.est&&w.posted!=='Yes'?' <span class="badge b-grey">est.</span>':''}</td><td class="num"><b>${rm(p.refund)}</b></td><td>${esc(w.choice||'')}</td><td>${w.posted==='Yes'?`<span class="badge b-green">${esc(w.status||'Added')}</span>`:'<span class="badge b-amber">Proposed</span>'}</td></tr>`}).join('')}
+  ${open.length>0?`<tr class="total"><td colspan="5">Set aside for open withdrawals</td><td class="num">${rm(tot)}</td><td colspan="2"></td></tr>`:''}</tbody></table></div></div>`}
 function finance(t){
   const A=DB.ledger.filter(l=>l.trip===t.id),L=A.filter(l=>!isXfer(l)),X=A.filter(isXfer);
   const inn=L.filter(l=>l.dir==='in').reduce((a,l)=>a+(+l.amount||0),0);
@@ -657,7 +680,7 @@ function finance(t){
   const reserved=outs.filter(l=>l.status==='Reserved').reduce((a,l)=>a+(+l.amount||0),0);
   const claims=outs.filter(l=>l.paidBy==='Personal (claim)'&&l.status==='Claim pending');
   const W=DB.withdrawals.filter(w=>w.trip===t.id);
-  const wOut=W.filter(w=>w.choice!=='-').reduce((a,w)=>a+wRefund(w),0);
+  const wOut=W.filter(w=>w.choice!=='-'&&w.posted!=='Yes').reduce((a,w)=>a+wPropose(t,w).out,0);
   const balance=inn-spent-reserved-wOut;
   // where the money sits: handed to treasurers, less what treasurers spent from team cash (plus any money treasurers received)
   const tIn=X.reduce((a,l)=>a+(+l.amount||0),0),byT=l=>l.source==='Treasurer link'||l.paidBy==='Team treasurer';
@@ -706,6 +729,7 @@ function attention(t){
     if(STAGES.some((_,k)=>!(DB.due[t.id]||{})[k]))out.push({sev:'w',text:'Some steps have no due date yet',go:{tab:'workflow',s}});
     if(s<9)out.push({sev:'w',text:`Now at step ${s+1}: ${STAGES[s][1].toLowerCase()} (${stageProg(t,s).n}/${stageProg(t,s).of})`,go:{tab:'workflow',s}});
   }
+  if(new Date(t.end)<TODAY&&DB.withdrawals.some(w=>w.trip===t.id&&w.posted!=='Yes'&&w.scenario!=='A'))out.push({sev:'r',text:'Withdrawal refunds to confirm in Finance',go:{tab:'finance'}});
   const f=finance(t);if(f.claims.length)out.push({sev:'r',text:`${f.claims.length} personal payment claim${f.claims.length>1?'s':''} pending (${rm(f.claims.reduce((a,l)=>a+ +l.amount,0))})`,go:{tab:'finance',f:'claims'}});
   if(!isUpcoming(t)&&!isClosed(t)){const cc=closeChecks(t);if(!cc.length)out.push({sev:'w',text:'Ready to close: open Finance and close the trip',go:{tab:'finance'}});else cc.forEach(c=>out.push({sev:'w',text:'To close: '+c.text,go:c.go}))}
   return out;
@@ -984,7 +1008,7 @@ function mediaBox(t){
   return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
 }
 const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
-const APP_VER='6.5';
+const APP_VER='6.6';
 // User IDs: spaces become dots, other symbols are dropped (e.g. "Mary Tan" → "mary.tan")
 const cleanId=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[.]|[.]$/g,'');
 const regLink=()=>((DB.forms||{}).regform||'').trim();
@@ -1109,13 +1133,13 @@ function vRemind(t,s){const due=(DB.due[t.id]||{})[s],left=items(t,s).filter(x=>
   return `<div class="sheethead"><div><h2>Send a reminder</h2><p class="sub">${esc(t.dest)} ${yearOf(t)} · Step ${s+1}</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
   <pre class="regmsg">${esc(msg)}</pre><div class="row" style="margin-top:12px">${b('PIC',t.pic)}${b('A.PIC',t.apic)}<button class="btn" data-act="copy" data-v="${esc(msg)}">Copy message</button></div>
   <p class="small muted" style="margin:10px 0 0">PICs with an email in their user account also get an automatic email 3 days before, on the due day, and every 3 days while overdue.</p>`}
-function printStatement(t){const f=finance(t),inn=f.L.filter(l=>l.dir==='in'),out=f.L.filter(l=>l.dir==='out'),W=DB.withdrawals.filter(w=>w.trip===t.id&&w.choice!=='-'&&wRefund(w)>0);
+function printStatement(t){const f=finance(t),inn=f.L.filter(l=>l.dir==='in'),out=f.L.filter(l=>l.dir==='out'),W=DB.withdrawals.filter(w=>w.trip===t.id&&w.choice!=='-'&&w.posted!=='Yes'&&wPropose(t,w).refund>0);
   const grp=L=>{const g={};L.forEach(l=>(g[l.cat||'Others']=g[l.cat||'Others']||[]).push(l));return g};
   const sec=(title,L)=>{const g=grp(L),tot=L.reduce((a,l)=>a+(+l.amount||0),0);return `<div class="sh">${title}</div><table class="ck"><thead><tr><th>Date</th><th class="i">Description</th><th>Category</th><th class="r">Amount (RM)</th></tr></thead><tbody>${Object.entries(g).map(([c,ls])=>ls.sort((a,b)=>a.date<b.date?-1:1).map(l=>`<tr><td>${fd(l.date)}</td><td>${esc(l.desc||'')}${l.status==='Reserved'?' (reserved)':''}</td><td>${esc(c)}</td><td class="r">${rm(l.amount).replace('RM','')}</td></tr>`).join('')+`<tr class="bd"><td></td><td colspan="2">Subtotal ${esc(c)}</td><td class="r">${rm(ls.reduce((a,l)=>a+(+l.amount||0),0)).replace('RM','')}</td></tr>`).join('')||'<tr><td colspan="4">None</td></tr>'}<tr class="tot"><td></td><td colspan="2"><b>Total</b></td><td class="r"><b>${rm(tot).replace('RM','')}</b></td></tr></tbody></table>`};
   const html=`<div class="wfp"><img class="lg" src="${LOGO_FULL}" alt=""><div class="tt">FINAL FINANCIAL STATEMENT</div><div class="st">${esc(t.dest)} ${yearOf(t)} · ${fr(t.start,t.end)} · Trip code ${esc(t.id)}</div>
   <table class="tb"><tr><td><span>PIC / A.PIC</span>${esc(t.pic||'')} / ${esc(t.apic||'')}</td><td><span>Participants</span>${conf(t).length} · Trip fee ${rm(t.fee)}</td></tr></table>
   ${sec('INCOME',inn)}${sec('EXPENSES',out)}
-  ${W.length?`<div class="sh">WITHDRAWAL REFUNDS</div><table class="ck"><tbody>${W.map(w=>`<tr><td class="i">${esc((REG(w.pid)||{}).name||'')}</td><td>Scenario ${esc(w.scenario)}</td><td class="r">${rm(wRefund(w)).replace('RM','')}</td></tr>`).join('')}</tbody></table>`:''}
+  ${W.length?`<div class="sh">WITHDRAWAL REFUNDS</div><table class="ck"><tbody>${W.map(w=>`<tr><td class="i">${esc((REG(w.pid)||{}).name||'')}</td><td>Scenario ${esc(w.scenario)}</td><td class="r">${rm(wPropose(t,w).refund).replace('RM','')}</td></tr>`).join('')}</tbody></table>`:''}
   ${isSplit(t)?`<div class="sh">SPLIT BY PERSON</div><table class="ck"><thead><tr><th class="i">Name</th><th class="r">Paid in</th><th class="r">Shared</th><th class="r">Own / group</th><th class="r">Refunded</th><th class="r">Balance</th></tr></thead><tbody>${splitCalc(t).rows.map(x=>`<tr><td>${esc(x.r.name)}</td><td class="r">${rm(x.paid).replace('RM','')}</td><td class="r">${rm(x.shared).replace('RM','')}</td><td class="r">${rm(x.own).replace('RM','')}</td><td class="r">${rm(x.refunded).replace('RM','')}</td><td class="r"><b>${rm(x.bal).replace('RM','')}</b></td></tr>`).join('')}</tbody></table>`:''}
   <div class="sh">SUMMARY</div><table class="ck"><tbody><tr><td class="i">Total income</td><td class="r">${rm(f.inn)}</td></tr><tr><td class="i">Total expenses</td><td class="r">${rm(f.spent+f.reserved)}</td></tr>${f.wOut?`<tr><td class="i">Withdrawal refunds</td><td class="r">${rm(f.wOut)}</td></tr>`:''}<tr class="tot"><td class="i"><b>Balance</b></td><td class="r"><b>${rm(f.balance)}</b></td></tr></tbody></table>
   <table class="tb" style="margin-top:18pt"><tr><td style="height:40pt"><span>Prepared by (Treasurer / PIC), signature & date</span></td><td><span>Checked by (Church Accounts), signature & date</span></td></tr></table>
@@ -1233,9 +1257,10 @@ function tFinance(t){
   ${fl.map(l=>`<tr><td style="white-space:nowrap">${fd(l.date)}</td><td>${esc(l.cat)}</td><td>${esc(l.desc)}${l.pid&&REG(l.pid)?` · ${esc(REG(l.pid).name)}`:''}${l.ref?` <span class="muted small">${esc(l.ref)}</span>`:''}${l.receipt?` <a class="small" href="${esc(l.receipt)}" target="_blank" rel="noopener">receipt</a>`:''}${isSplit(t)&&l.dir==='out'&&!CLOSE_CATS.includes(l.cat)?` <span class="badge ${spFor(l)?'b-amber':'b-grey'}">${spFor(l)?'for '+(spFor(l).length===1?esc((REG(spFor(l)[0])||{}).name||'1 person'):spFor(l).length+' people'):'shared'}</span>`:''}${l.source==='Treasurer link'?` <span class="badge b-blue">via treasurer link${l.enteredBy?' · '+esc(l.enteredBy):''}</span>`:''}</td><td>${l.dir==='out'?esc(l.paidBy):'—'}</td>
    <td><span class="badge ${l.status==='Paid'||l.status==='Claimed'?'b-green':l.status==='Reserved'?'b-blue':'b-amber'}">${esc(l.status)}</span></td><td class="num">${isXfer(l)?`<span class="xfer" title="Moved from the church account to the treasurer. Not new money, so the balance doesn't change.">⇄ ${rm(l.amount)}</span>`:l.dir==='in'?rm(l.amount):''}</td><td class="num">${l.dir==='out'?rm(l.amount):''}</td><td class="num balc"><b>${run[l.id]===null?'<span class="muted">reserved</span>':rm(run[l.id])}</b></td>${ro?`<td><button class="link small" data-act="ledger" data-id="${t.id}" data-l="${l.id}">Edit</button></td>`:''}</tr>`).join('')||'<tr><td colspan="9" class="empty">No entries.</td></tr>'}
   </tbody></table></div><p class="small muted" style="margin:10px 0 0">Balance runs in date order across all entries. Reserved bookings are not counted until paid. ⇄ = funds handed from the church to a treasurer: shown for the record, but not added to Money in.</p></div>
+  ${wdPanel(t)}
   <div class="grid2" style="margin-top:20px"><div class="stack">${closePanel}<div class="panel"><h2>Spending by category</h2>${Object.keys(byCat).length?Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([c,a])=>`<div class="catbar"><span>${esc(c)}</span><span class="bar"><i style="width:${a/max*100}%"></i></span><span class="small">${rm(a)}</span></div>`).join(''):'<p class="muted">No spending yet.</p>'}</div></div>
   <div class="stack"><div class="panel"><h2>Meals</h2><p class="small">${t.mealMode==='Allowance'?`Allowance per person: breakfast ${rm(t.mealB)}, lunch ${rm(t.mealL)}, dinner ${rm(t.mealD)}. Participants sign each time they receive cash: <button class="link small" data-act="printmeals" data-id="${t.id}">print daily sign sheets</button> · <button class="link small" data-act="form" data-f="meals">blank sheet ↓</button>.`:'Treasurers pay the actual bill.'} <button class="link small" data-act="goto" data-id="${t.id}" data-tab="workflow" data-f="all" data-s="2">Change in Planning</button></p></div>
-  <div class="panel"><h2>${closed?'Final statement':'Running position'}</h2><p class="small">Money in ${rm(f.inn)} − spent ${rm(f.spent)} − reserved ${rm(f.reserved)} − withdrawals ${rm(f.wOut)} = <b>${rm(f.balance)}</b>.</p>
+  <div class="panel"><h2>${closed?'Final statement':'Running position'}</h2><p class="small">Money in ${rm(f.inn)} − spent ${rm(f.spent)} − reserved ${rm(f.reserved)} − set aside for withdrawals ${rm(f.wOut)} = <b>${rm(f.balance)}</b>.</p>
   <p class="small">${closed?`Refund ${rm(f.perHead)} to each of the ${conf(t).length} travellers.`:`If closed today: ${rm(f.perHead)} per traveller.`}</p></div></div></div>`;
 }
 function tWithdraw(t){
@@ -1245,8 +1270,8 @@ function tWithdraw(t){
   <details class="panel flow" open><summary>Withdrawal process</summary><div class="flowwrap">${FLOW_WD}</div></details>
   <div class="panel"><div class="stephead"><h2>Withdrawals for this trip</h2>${can('edit')?`<button class="btn sm pri" data-act="withdraw" data-id="${t.id}">Record withdrawal</button>`:''}</div>
   <div class="tbl"><table class="policy"><thead><tr><th>Name</th><th>Notified</th><th>Scenario</th><th>Reason</th><th class="num">Amount paid</th><th class="num">Non-recoverable</th><th class="num">Refund</th><th>Choice</th><th>Status</th>${can('edit')?'<th></th>':''}</tr></thead><tbody>
-  ${W.map(w=>`<tr><td>${esc((REG(w.pid)||{}).name||'—')}</td><td>${fd(w.date)}</td><td><b>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</b></td><td>${esc(w.reason)}</td><td class="num">${rm(w.paid)}</td><td class="num">${rm(w.nonrec)}</td><td class="num"><b>${rm(wRefund(w))}</b></td><td>${esc(w.choice)}</td><td>${esc(w.status)}</td>${can('edit')?`<td><button class="link small" data-act="withdraw" data-id="${t.id}" data-w="${w.id}">Edit</button></td>`:''}</tr>`).join('')||'<tr><td colspan="10" class="empty">No one has withdrawn from this trip.</td></tr>'}
-  ${W.length?`<tr class="total"><td colspan="4">Total</td><td class="num">${rm(W.reduce((a,w)=>a+(+w.paid||0),0))}</td><td class="num">${rm(W.reduce((a,w)=>a+(+w.nonrec||0),0))}</td><td class="num">${rm(W.reduce((a,w)=>a+wRefund(w),0))}</td><td colspan="${can('edit')?3:2}"></td></tr>`:''}
+  ${W.map(w=>`<tr><td>${esc((REG(w.pid)||{}).name||'—')}</td><td>${fd(w.date)}</td><td><b>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</b></td><td>${esc(w.reason)}</td>${(()=>{const p=wPropose(t,w);return `<td class="num">${rm(p.paid)}</td><td class="num">${rm(p.nonrec)}${p.est&&w.posted!=='Yes'?' <span class="badge b-grey">est.</span>':''}</td><td class="num"><b>${rm(p.refund)}</b></td>`})()}<td>${esc(w.choice)}</td><td>${w.posted==='Yes'?esc(w.status):'<span class="badge b-amber">Proposed</span>'}</td>${can('edit')?`<td><button class="link small" data-act="withdraw" data-id="${t.id}" data-w="${w.id}">Edit</button></td>`:''}</tr>`).join('')||'<tr><td colspan="10" class="empty">No one has withdrawn from this trip.</td></tr>'}
+  ${W.length?`<tr class="total"><td colspan="4">Total</td><td class="num">${rm(W.reduce((a,w)=>a+wPropose(t,w).paid,0))}</td><td class="num">${rm(W.reduce((a,w)=>a+wPropose(t,w).nonrec,0))}</td><td class="num">${rm(W.reduce((a,w)=>a+wPropose(t,w).refund,0))}</td><td colspan="${can('edit')?3:2}"></td></tr>`:''}
   </tbody></table></div></div>`;
 }
 function tReport(t){
@@ -1385,7 +1410,7 @@ function moneyHistory(r){
   const regs=DB.regs.filter(x=>pkey(x)===pkey(r)&&T(x.trip)).sort((a,b)=>T(a.trip).start<T(b.trip).start?1:-1);
   let tc=0,tr=0;
   const rows=regs.map(x=>{const t=T(x.trip),w=DB.withdrawals.find(v=>v.pid===x.id),paid=Math.max(paidOf(x),w?(+w.paid||0):0);let ref=0,rem=[];
-    if(w){const amt=wRefund(w);if(w.choice==='Refund'){ref+=amt;rem.push(`Withdrawal refund, Scenario ${w.scenario}${w.comp==='Yes'?' + D':''}${w.status?' ('+w.status+')':''}`)}else if(w.choice.startsWith('Donate'))rem.push(`Withdrew; ${rm(amt)} donated to Mission Fund`);else rem.push('Withdrew before paying')}
+    if(w){const amt=wPropose(t,w).refund;if(w.choice==='Refund'){ref+=amt;rem.push(`Withdrawal refund, Scenario ${w.scenario}${w.comp==='Yes'?' + D':''}${w.status?' ('+w.status+')':''}`)}else if(w.choice.startsWith('Donate'))rem.push(`Withdrew; ${rm(amt)} donated to Mission Fund`);else rem.push('Withdrew before paying')}
     else if(isCancelled(t))rem.push('Trip cancelled'+(paid?'; record the refund as a withdrawal':''));
     else if(x.status==='Confirmed'){const mine=DB.ledger.filter(l=>l.trip===t.id&&l.pid===x.id&&l.dir==='out');const sr=mine.filter(l=>l.cat==='Surplus refund'),dn=mine.filter(l=>l.cat==='Donation to church');
       if(sr.length){const a=sr.reduce((q,l)=>q+ +l.amount,0);ref+=a;rem.push('Surplus refund '+fd(sr[0].date))}
@@ -1432,7 +1457,7 @@ function vWithdrawForm(t,w,pid){
   <div><label>Compassionate (D)</label><select name="comp" data-calc><option ${w.comp==='No'?'selected':''}>No</option><option ${w.comp==='Yes'?'selected':''}>Yes</option></select></div>
   <div class="full"><label>Reason</label><input name="reason" value="${esc(w.reason||'')}"></div>
   <div><label>Amount paid (RM)</label><input type="number" step="0.01" name="paid" value="${paid}" data-calc></div>
-  <div><label>Non-recoverable (RM)</label><input type="number" step="0.01" name="nonrec" value="${w.nonrec}" data-calc></div>
+  <div><label>Non-recoverable (RM) <small>leave 0 to let the app estimate it</small></label><input type="number" step="0.01" name="nonrec" value="${w.nonrec}" data-calc></div>
   <div><label>Refund (RM)</label><input name="refund" readonly value="${wRefund({...w,paid})}"></div>
   <div><label>Participant chooses</label><select name="choice">${['Refund','Donate to Mission Fund','-'].map(c=>`<option ${c===w.choice?'selected':''}>${c}</option>`).join('')}</select></div>
   <div><label>Status</label><input name="status" value="${esc(w.status)}" placeholder="Pending / Refunded 3 Jul 2026"></div>
@@ -1483,7 +1508,7 @@ function printTrip(t){
    <table class="tb"><tr><td style="height:34pt"><span>Prepared by (Treasurer)</span></td><td><span>Checked by (PIC / A.PIC)</span></td><td><span>Verified by (Church Accounts)</span></td></tr></table>`+foot('Financial Statement');
   // withdrawals
   const wd=head('MISSION TRIP WITHDRAWALS','Refunds follow the TOW Mission Trip Cancellation & Refund Policy. No planning fee.')+tripbox+`<div class="sh">WITHDRAWALS (${W.length})</div><table class="ck"><thead><tr><th>Name</th><th>Notified</th><th>Scenario</th><th>Reason</th><th style="text-align:right">Paid RM</th><th style="text-align:right">Non-recoverable RM</th><th style="text-align:right">Refund RM</th><th>Choice / status</th></tr></thead><tbody>
-   ${W.map(w=>`<tr><td>${esc((REG(w.pid)||{}).name||'')}</td><td>${fd(w.date)}</td><td>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</td><td>${esc(w.reason||'')}</td><td class="r">${rm(w.paid).replace('RM','')}</td><td class="r">${rm(w.nonrec).replace('RM','')}</td><td class="r"><b>${rm(wRefund(w)).replace('RM','')}</b></td><td>${esc(w.choice)}${w.status?' · '+esc(w.status):''}</td></tr>`).join('')||'<tr><td colspan="8">No one withdrew from this trip.</td></tr>'}</tbody></table>`+foot('Withdrawals');
+   ${W.map(w=>`<tr><td>${esc((REG(w.pid)||{}).name||'')}</td><td>${fd(w.date)}</td><td>${esc(w.scenario)}${w.comp==='Yes'?' + D':''}</td><td>${esc(w.reason||'')}</td>${(()=>{const p=wPropose(t,w);return `<td class="r">${rm(p.paid).replace('RM','')}</td><td class="r">${rm(p.nonrec).replace('RM','')}${p.est&&w.posted!=='Yes'?' (est.)':''}</td><td class="r"><b>${rm(p.refund).replace('RM','')}</b></td>`})()}<td>${esc(w.choice)}${w.status?' · '+esc(w.status):''}</td></tr>`).join('')||'<tr><td colspan="8">No one withdrew from this trip.</td></tr>'}</tbody></table>`+foot('Withdrawals');
   const strip=h=>h.replace(/^<div class="wfp">/,'').replace(/<\/div>$/,'');
   $('#print').innerHTML=page(cover,true)+`<div class="wfp" style="page-break-before:always">${strip(printReport(t,true))}</div>`+page(parts)+page(teams)+page(fin)+page(wd)+`<div class="wfp" style="page-break-before:always">${strip(printWorkflow(t,true))}</div>`;
   log('Printed trip pack',`${t.dest} ${yearOf(t)}`);
@@ -1636,6 +1661,15 @@ document.addEventListener('click',async e=>{
     case 'adduser':modal(vAddUser(),true);break;
     case 'lclear':Object.assign(S,{lf:'',lfrom:'',lto:'',lq:''});render();break;
     case 'pclear':Object.assign(S,{q:'',py:'',pt:'',ps:'',pr:false});render();break;
+    case 'wdpost':{const t=T(d.id),open=DB.withdrawals.filter(w=>w.trip===t.id&&w.posted!=='Yes');if(!open.length)break;
+      const lines=open.map(w=>{const p=wPropose(t,w);return `${(REG(w.pid)||{}).name}: ${p.donate?'donate':'refund'} ${rm(p.refund)}`});
+      if(!confirm(`${new Date(t.end)<TODAY?'':'The trip has not ended yet. '}Add these to the Finance entries?\n\n${lines.join('\n')}`))break;
+      const day=TODAY.toISOString().slice(0,10);
+      open.forEach(w=>{const p=wPropose(t,w);w.paid=p.paid;w.nonrec=p.nonrec;w.posted='Yes';
+        if(w.choice!=='-'&&p.refund>0)DB.ledger.push({id:uid(),trip:t.id,date:day,dir:'out',cat:p.donate?'Donation to Mission Fund':'Withdrawal refund',desc:`${p.donate?'Donated to Mission Fund':'Withdrawal refund'}: ${(REG(w.pid)||{}).name||''} (scenario ${w.scenario})`,amount:p.refund,pid:w.pid,paidBy:'Church account',status:'Paid',ref:'',receipt:''});
+        w.status=(p.donate?'Donated ':'Refunded ')+fd(day)});
+      save();log('Added withdrawal refunds to Finance',`${t.dest} ${yearOf(t)}`);render();toast(`${open.length} withdrawal${open.length>1?'s':''} added to entries`);
+      if(new Date(t.end)<TODAY&&finance(t).balance>0.005&&confirm(`Balance left: ${rm(finance(t).balance)}. Work out the refunds for the participants now?`)){if(isSplit(t)){const k=splitCalc(t),m={};k.rows.forEach(x=>m[x.r.id]=Math.max(0,x.bal));modal(vSurplus(t,m),true)}else modal(vSurplus(t),true)}break}
     case 'tlinkall':{const t=T(d.id);conf(t).forEach(r=>{if(tLinks(t).some(l=>l.active&&l.name.toLowerCase()===r.name.toLowerCase()))return;const a=new Uint8Array(12);crypto.getRandomValues(a);tLinks(t).push({key:[...a].map(x=>x.toString(16).padStart(2,'0')).join(''),name:r.name,active:true,created:TODAY.toISOString().slice(0,10)})});save();log('Created entry links for everyone',t.id);render();toast('Links created. Send each person theirs with the WhatsApp button.');break}
     case 'finmode':{const t=T(d.id);if(!can('edit'))break;const on=d.m==='split';if(on===isSplit(t))break;if(!on&&DB.ledger.some(l=>l.trip===t.id&&spFor(l))&&!confirm('Switch back to Team pool? Expenses marked for selected people will be shared by everyone again (the markings are kept if you switch back).'))break;P(t).split=on;save();log('Finance mode',`${t.dest}: ${on?'Split per person':'Team pool'}`);render();toast(on?'Split per person is on. Choose "Who is this for?" when adding expenses.':'Back to Team pool.');break}
     case 'forall':{const fm=b.closest('form');fm.querySelector('.forlist').hidden=true;fm.querySelectorAll('[data-act=forall],[data-act=forsome]').forEach(x=>x.setAttribute('aria-pressed',x===b));break}
@@ -1739,7 +1773,7 @@ document.addEventListener('submit',async e=>{
   if(k==='pay'){const r=REG(f.dataset.id);DB.ledger.push({id:uid(),trip:r.trip,date:v.date,dir:'in',cat:'Participant contribution',desc:'Payment',amount:num(v.amount),pid:r.id,paidBy:'',status:'Paid',ref:v.ref});save();log('Recorded payment',`${r.name} ${rm(v.amount)}`);modal(vProfile(r.id));render();return}
   if(k==='ledger'){const t=T(f.dataset.id);const rec={trip:t.id,date:v.date,dir:v.dir,cat:v.cat,desc:v.desc,amount:num(v.amount),pid:v.pid||'',paidBy:v.dir==='out'?v.paidBy:'',status:v.dir==='out'?v.status:'Paid',ref:v.ref||'',receipt:v.receipt||'',split:(()=>{const fl=f.querySelector('.forlist');if(!fl||fl.hidden||v.dir!=='out')return '';return [...f.querySelectorAll('input[name=sp]:checked')].map(x=>x.value)})()};
     if(f.dataset.l)Object.assign(DB.ledger.find(l=>l.id===f.dataset.l),rec);else DB.ledger.push({id:uid(),...rec});save();log(f.dataset.l?'Edited finance entry':'Added finance entry',`${t.dest} ${yearOf(t)}: ${v.cat} ${rm(v.amount)}`);closeModal();render();return}
-  if(k==='withdraw'){const t=T(f.dataset.id);const rec={trip:t.id,pid:v.pid,date:v.date,scenario:v.scenario,comp:v.comp,reason:v.reason,paid:num(v.paid),nonrec:num(v.nonrec),fee:0,choice:v.choice,status:v.status};
+  if(k==='withdraw'){const t=T(f.dataset.id);const rec={trip:t.id,pid:v.pid,date:v.date,scenario:v.scenario,comp:v.comp,reason:v.reason,paid:num(v.paid),nonrec:num(v.nonrec),fee:0,choice:v.choice,status:v.status};if(!(+v.paid>0))rec.paid='';
     if(f.dataset.w)Object.assign(DB.withdrawals.find(w=>w.id===f.dataset.w),rec);else DB.withdrawals.push({id:uid(),...rec});REG(v.pid).status='Withdrawn';save();log('Recorded withdrawal',`${REG(v.pid).name} (${t.dest} ${yearOf(t)})`);closeModal();go({trip:t.id,tab:'withdrawals'});return}
   if(k==='trip'){let id=f.dataset.id;const data={dest:v.dest.trim(),country:v.country.trim(),overseas:v.overseas==='1',start:v.start,end:v.end,fee:num(v.fee),deposit:num(v.deposit),status:v.status,cancelReason:v.status==='Cancelled'?v.cancelReason:'',formCode:(v.formCode||'').trim()};
     if(id){Object.assign(T(id),data)}else{id=(v.id||`${v.start.slice(0,4)}-${data.dest.replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase()}`).trim();if(T(id))id+='-'+uid().slice(0,2).toUpperCase();
