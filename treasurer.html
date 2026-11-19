@@ -68,9 +68,9 @@ async function call(body){const r=await fetch(API,{method:'POST',headers:{'Conte
 async function sync(){
   if(busy||!API||!navigator.onLine)return;busy=true;
   try{
-    S.info=await call({action:'tInfo',trip:TRIP,key:KEY});save();
+    S.info=await call({action:'tInfo',trip:TRIP,key:KEY});merge(S.info.entries);delete S.info.entries;save();
     const q=S.entries.filter(e=>!e.sent);
-    if(q.length){const j=await call({action:'tEntry',trip:TRIP,key:KEY,name:S.name,entries:q.map(({sent,dirty,del,orig,locked,...e})=>e)});(j.saved||[]).forEach(id=>{const e=S.entries.find(x=>x.id===id);if(e){e.sent=true;e.dirty=false;delete e.orig}});save();msg=''}
+    if(q.length){const j=await call({action:'tEntry',trip:TRIP,key:KEY,name:S.name,entries:q.map(({sent,dirty,del,orig,locked,status,by,...e})=>e)});(j.saved||[]).forEach(id=>{const e=S.entries.find(x=>x.id===id);if(e){e.sent=true;e.dirty=false;delete e.orig}});save();msg=''}
     // changes to entries that were already sent
     const ch=S.entries.filter(e=>e.sent&&(e.dirty||e.del));
     if(ch.length){const j=await call({action:'tEdit',trip:TRIP,key:KEY,name:S.name,edits:ch.map(e=>e.del?{id:e.id,del:true}:{id:e.id,entry:snap(e)})});
@@ -84,6 +84,12 @@ async function sync(){
 function forUI(){const I=S.info,mode=forMode||(I.me?'me':'all');
   return `<label>Who is this for?</label><div class="seg three"><button type="button" data-f="all" aria-pressed="${mode==='all'}">Everyone</button>${I.me?`<button type="button" data-f="me" aria-pressed="${mode==='me'}">Just me</button>`:''}<button type="button" data-f="some" aria-pressed="${mode==='some'}">Choose people</button></div>
   ${mode==='some'?`<div class="plist">${(I.people||[]).map(p=>`<label class="pk"><input type="checkbox" value="${esc(p.id)}" ${forSel.has(p.id)?'checked':''}> ${esc(p.name)}</label>`).join('')}</div>`:''}`}
+// bring in what's already in the church records for this link (entered on another phone, or fixed by the PIC)
+function merge(list){if(!Array.isArray(list))return;const srv={};list.forEach(x=>srv[x.id]=x);
+  S.entries=S.entries.filter(e=>!e.sent||e.dirty||e.del||srv[e.id]);           // removed by the church
+  list.forEach(x=>{const e=S.entries.find(y=>y.id===x.id);const locked=x.status!=='Paid'&&x.status!=='Claim pending';
+    if(!e)S.entries.push({...x,t:0,sent:true,locked});
+    else if(!e.dirty&&!e.del)Object.assign(e,{date:x.date,dir:x.dir,cat:x.cat,desc:x.desc,amount:x.amount,paidBy:x.paidBy,split:x.split,status:x.status,by:x.by,sent:true,locked})})}
 const clearForm=()=>{const f=$('#ef');if(f)f.remove()};
 const snap=e=>({date:e.date,dir:e.dir,cat:e.cat,desc:e.desc,amount:e.amount,paidBy:e.paidBy,split:e.split});
 const nameOf=id=>((S.info&&S.info.people||[]).find(p=>p.id===id)||{}).name||'1 person';
@@ -114,7 +120,7 @@ function render(){
    <div class="card"><div class="sum"><div><span>In</span><b>${rm(inn)}</b></div><div><span>Out</span><b>${rm(out)}</b></div><div><span>Balance</span><b>${rm(inn-out)}</b></div></div>
     <p class="tiny">${q?`${q} entr${q>1?'ies':'y'} waiting to send. They send automatically when you are back online.`:'All entries sent to the church records.'}</p>
     <table><thead><tr><th>Date</th><th>Description</th><th class="num">In</th><th class="num">Out</th><th class="num">Balance</th></tr></thead><tbody>
-    ${list.map(e=>{bal+=(e.dir==='in'?1:-1)*e.amount;return `<tr><td>${e.date.slice(5)}</td><td>${esc(e.desc)}<br><span class="note">${esc(e.cat)}${e.paidBy==='Personal (claim)'?' · personal claim':''}${Array.isArray(e.split)&&e.split.length?' · for '+(e.split.length===1?esc(nameOf(e.split[0])):e.split.length+' people'):''}</span> <span class="${e.sent&&!e.dirty?'s':'q'}">${!e.sent?'Waiting':e.dirty?'Change waiting':'Sent'}</span>${e.locked?'':` <button type="button" class="lnk" data-e="${e.id}">Edit</button>`}</td><td class="num">${e.dir==='in'?rm(e.amount):''}</td><td class="num">${e.dir==='out'?rm(e.amount):''}</td><td class="num">${rm(bal)}</td></tr>`}).reverse().join('')||'<tr><td colspan="5" class="note">No entries yet.</td></tr>'}
+    ${list.map(e=>{bal+=(e.dir==='in'?1:-1)*e.amount;return `<tr><td>${e.date.slice(5)}</td><td>${esc(e.desc)}<br><span class="note">${esc(e.cat)}${e.paidBy==='Personal (claim)'?(e.status==='Claimed'?' · claim settled':' · personal claim'):''}${e.by&&S.info&&!S.info.name&&e.by.toLowerCase()!==String(S.name).toLowerCase()?' · by '+esc(e.by):''}${Array.isArray(e.split)&&e.split.length?' · for '+(e.split.length===1?esc(nameOf(e.split[0])):e.split.length+' people'):''}</span> <span class="${e.sent&&!e.dirty?'s':'q'}">${!e.sent?'Waiting':e.dirty?'Change waiting':'Sent'}</span>${e.locked?'':` <button type="button" class="lnk" data-e="${e.id}">Edit</button>`}</td><td class="num">${e.dir==='in'?rm(e.amount):''}</td><td class="num">${e.dir==='out'?rm(e.amount):''}</td><td class="num">${rm(bal)}</td></tr>`}).reverse().join('')||'<tr><td colspan="5" class="note">No entries yet.</td></tr>'}
     </tbody></table><p class="tiny">Typed something wrong? Tap <b>Edit</b> next to the entry to fix or delete it. Once the church has settled a claim, ask the PIC to change it instead.</p><p class="tiny">Recording as ${esc(S.name)}. Keep every receipt. Pay from team cash so no one needs to claim later.</p><p class="tiny"><b>Tip:</b> add this page to your home screen (Share or ⋮ menu → Add to Home Screen) so it opens even with no signal.</p></div>`;
   app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{dir=b.dataset.d;render()});
   app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{forMode=b.dataset.f;render()});
