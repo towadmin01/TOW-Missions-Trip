@@ -440,6 +440,8 @@ tr.cancel td{color:var(--muted)}
 .xfer{color:var(--muted);font-style:italic;white-space:nowrap;cursor:help}
 
 .wdp{border-left:3px solid var(--amber)}.wdp td:nth-child(3){min-width:200px}.wdp td:first-child{white-space:nowrap}.wbd{margin-top:6px;min-width:220px}.wbd summary{cursor:pointer;color:var(--accent,#9a7b3c);font-weight:600}.wbd table{margin:6px 0;width:100%;max-width:380px}.wbd td,.wbd th{padding:3px 6px}.wdp.done{border-left-color:var(--green)}
+
+.reports .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.reports .rgrid>div{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}.reports .row{margin-top:6px;gap:8px}
 </style>
 </head>
 <body>
@@ -1015,7 +1017,7 @@ function mediaBox(t){
   return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
 }
 const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
-const APP_VER='6.6';
+const APP_VER='6.7';
 // User IDs: spaces become dots, other symbols are dropped (e.g. "Mary Tan" → "mary.tan")
 const cleanId=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[.]|[.]$/g,'');
 const regLink=()=>((DB.forms||{}).regform||'').trim();
@@ -1095,7 +1097,7 @@ function tWorkflow(t,s){
     tlink:()=>{const L=tLinks(t).filter(l=>l.active);return `<span class="small">${L.length?L.map(l=>`<span class="badge b-green">${esc(l.name)}</span>`).join(' '):'<span class="muted">No links yet.</span>'} <button class="link small" data-act="tab" data-t="finance">Manage treasurer links in Finance</button></span>`},
     tnote:()=>{const m=tNote(t);return `<pre class="regmsg">${esc(m)}</pre><div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(m)}">Copy note</button><a class="btn sm pri" href="https://wa.me/?text=${encodeURIComponent(m)}" target="_blank" rel="noopener">Send on WhatsApp</a>${t.mealMode==='Allowance'?`<button class="btn sm" data-act="printmeals" data-id="${t.id}">Print meal sign sheets</button>`:''}</div>`},
     during:()=>{const f=finance(t);return `<p class="small">${new Date(t.end)<TODAY?'Trip dates have passed.':'Ticks itself after '+fd(t.end)+'.'} Expenses recorded so far: <b>${f.L.filter(l=>l.dir==='out').length}</b> (${rm(f.spent)}). <button class="link small" data-act="tab" data-t="finance">Open Finance</button></p><details class="small"><summary>Note for treasurers</summary><pre class="regmsg">${esc(tNote(t))}</pre></details>`},
-    stmt:()=>`<div class="row"><button class="btn sm pri" data-act="printstmt" data-id="${t.id}">View / print final statement</button><span class="small muted">Made from the Finance entries.</span></div>`,
+    stmt:()=>`<div class="row"><button class="btn sm pri" data-act="printstmt" data-id="${t.id}">View / print final statement (PDF)</button> <button class="btn sm" data-act="csvstmt" data-id="${t.id}">CSV</button><span class="small muted">Made from the Finance entries.</span></div>`,
     surplus:()=>{const f=finance(t),L=f.L.filter(l=>['Surplus refund','Donation to church','Other close-out'].includes(l.cat)),ref=L.filter(l=>l.cat==='Surplus refund');return `<div class="small">Balance now <b>${rm(f.balance)}</b>${L.length?` · Refunded ${rm(ref.reduce((a,l)=>a+ +l.amount,0))} to ${ref.length} people · Donated/other ${rm(L.filter(l=>l.cat!=='Surplus refund').reduce((a,l)=>a+ +l.amount,0))}`:''}${ed&&f.balance>0.009?` <button class="btn sm pri" style="margin-left:6px" data-act="surplus" data-id="${t.id}">Distribute surplus</button>`:''}</div>`},
     closetrip:()=>closeBox(t),
     media:()=>mediaBox(t),
@@ -1140,18 +1142,46 @@ function vRemind(t,s){const due=(DB.due[t.id]||{})[s],left=items(t,s).filter(x=>
   return `<div class="sheethead"><div><h2>Send a reminder</h2><p class="sub">${esc(t.dest)} ${yearOf(t)} · Step ${s+1}</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
   <pre class="regmsg">${esc(msg)}</pre><div class="row" style="margin-top:12px">${b('PIC',t.pic)}${b('A.PIC',t.apic)}<button class="btn" data-act="copy" data-v="${esc(msg)}">Copy message</button></div>
   <p class="small muted" style="margin:10px 0 0">PICs with an email in their user account also get an automatic email 3 days before, on the due day, and every 3 days while overdue.</p>`}
+const m2=v=>(+v||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
 function printStatement(t){const f=finance(t),inn=f.L.filter(l=>l.dir==='in'),out=f.L.filter(l=>l.dir==='out'),W=DB.withdrawals.filter(w=>w.trip===t.id&&w.choice!=='-'&&w.posted!=='Yes'&&wPropose(t,w).refund>0);
   const grp=L=>{const g={};L.forEach(l=>(g[l.cat||'Others']=g[l.cat||'Others']||[]).push(l));return g};
-  const sec=(title,L)=>{const g=grp(L),tot=L.reduce((a,l)=>a+(+l.amount||0),0);return `<div class="sh">${title}</div><table class="ck"><thead><tr><th>Date</th><th class="i">Description</th><th>Category</th><th class="r">Amount (RM)</th></tr></thead><tbody>${Object.entries(g).map(([c,ls])=>ls.sort((a,b)=>a.date<b.date?-1:1).map(l=>`<tr><td>${fd(l.date)}</td><td>${esc(l.desc||'')}${l.status==='Reserved'?' (reserved)':''}</td><td>${esc(c)}</td><td class="r">${rm(l.amount).replace('RM','')}</td></tr>`).join('')+`<tr class="bd"><td></td><td colspan="2">Subtotal ${esc(c)}</td><td class="r">${rm(ls.reduce((a,l)=>a+(+l.amount||0),0)).replace('RM','')}</td></tr>`).join('')||'<tr><td colspan="4">None</td></tr>'}<tr class="tot"><td></td><td colspan="2"><b>Total</b></td><td class="r"><b>${rm(tot).replace('RM','')}</b></td></tr></tbody></table>`};
-  const html=`<div class="wfp"><img class="lg" src="${LOGO_FULL}" alt=""><div class="tt">FINAL FINANCIAL STATEMENT</div><div class="st">${esc(t.dest)} ${yearOf(t)} · ${fr(t.start,t.end)} · Trip code ${esc(t.id)}</div>
-  <table class="tb"><tr><td><span>PIC / A.PIC</span>${esc(t.pic||'')} / ${esc(t.apic||'')}</td><td><span>Participants</span>${conf(t).length} · Trip fee ${rm(t.fee)}</td></tr></table>
+  const sec=(title,L)=>{const g=grp(L),tot=L.reduce((a,l)=>a+(+l.amount||0),0);return `<div class="sh">${title}</div><table class="ck"><thead><tr><th>Date</th><th class="i">Description</th><th>Category</th><th class="r">Amount (RM)</th></tr></thead><tbody>${Object.entries(g).map(([c,ls])=>ls.sort((a,b)=>a.date<b.date?-1:1).map(l=>`<tr><td style="white-space:nowrap">${fd(l.date)}</td><td>${esc(l.desc||'')}${l.status==='Reserved'?' (reserved)':''}</td><td>${esc(c)}</td><td class="r">${m2(l.amount)}</td></tr>`).join('')+`<tr class="bd"><td></td><td colspan="2">Subtotal ${esc(c)}</td><td class="r">${m2(ls.reduce((a,l)=>a+(+l.amount||0),0))}</td></tr>`).join('')||'<tr><td colspan="4">None</td></tr>'}<tr class="tot"><td></td><td colspan="2"><b>Total</b></td><td class="r"><b>${m2(tot)}</b></td></tr></tbody></table>`};
+  const html=`<div class="wfp"><img class="lg" src="${LOGO_FULL}" alt=""><div class="tt">${isClosed(t)?'FINAL FINANCIAL STATEMENT':'STATEMENT OF ACCOUNTS'}</div><div class="st">${esc(t.dest)} ${yearOf(t)} · ${fr(t.start,t.end)} · Trip code ${esc(t.id)}${isClosed(t)?'':` · As at ${fd(TODAY.toISOString())}`}</div>
+  <table class="tb"><tr><td><span>PIC / A.PIC</span>${esc(t.pic||'')} / ${esc(t.apic||'')}</td><td><span>Participants</span>${conf(t).length} · Trip fee RM ${m2(t.fee)}</td></tr></table>
   ${sec('INCOME',inn)}${sec('EXPENSES',out)}
-  ${W.length?`<div class="sh">WITHDRAWAL REFUNDS</div><table class="ck"><tbody>${W.map(w=>`<tr><td class="i">${esc((REG(w.pid)||{}).name||'')}</td><td>Scenario ${esc(w.scenario)}</td><td class="r">${rm(wPropose(t,w).refund).replace('RM','')}</td></tr>`).join('')}</tbody></table>`:''}
-  ${isSplit(t)?`<div class="sh">SPLIT BY PERSON</div><table class="ck"><thead><tr><th class="i">Name</th><th class="r">Paid in</th><th class="r">Shared</th><th class="r">Own / group</th><th class="r">Refunded</th><th class="r">Balance</th></tr></thead><tbody>${splitCalc(t).rows.map(x=>`<tr><td>${esc(x.r.name)}</td><td class="r">${rm(x.paid).replace('RM','')}</td><td class="r">${rm(x.shared).replace('RM','')}</td><td class="r">${rm(x.own).replace('RM','')}</td><td class="r">${rm(x.refunded).replace('RM','')}</td><td class="r"><b>${rm(x.bal).replace('RM','')}</b></td></tr>`).join('')}</tbody></table>`:''}
-  <div class="sh">SUMMARY</div><table class="ck"><tbody><tr><td class="i">Total income</td><td class="r">${rm(f.inn)}</td></tr><tr><td class="i">Total expenses</td><td class="r">${rm(f.spent+f.reserved)}</td></tr>${f.wOut?`<tr><td class="i">Withdrawal refunds</td><td class="r">${rm(f.wOut)}</td></tr>`:''}<tr class="tot"><td class="i"><b>Balance</b></td><td class="r"><b>${rm(f.balance)}</b></td></tr></tbody></table>
+  ${W.length?`<div class="sh">WITHDRAWAL REFUNDS</div><table class="ck"><tbody>${W.map(w=>`<tr><td class="i">${esc((REG(w.pid)||{}).name||'')}</td><td>Scenario ${esc(w.scenario)}</td><td class="r">${m2(wPropose(t,w).refund)}</td></tr>`).join('')}</tbody></table>`:''}
+  ${isSplit(t)?`<div class="sh">SPLIT BY PERSON</div><table class="ck"><thead><tr><th class="i">Name</th><th class="r">Paid in</th><th class="r">Shared</th><th class="r">Own / group</th><th class="r">Refunded</th><th class="r">Balance</th></tr></thead><tbody>${splitCalc(t).rows.map(x=>`<tr><td>${esc(x.r.name)}</td><td class="r">${m2(x.paid)}</td><td class="r">${m2(x.shared)}</td><td class="r">${m2(x.own)}</td><td class="r">${m2(x.refunded)}</td><td class="r"><b>${m2(x.bal)}</b></td></tr>`).join('')}</tbody></table>`:''}
+  <div class="sh">SUMMARY</div><table class="ck"><tbody><tr><td class="i">Total income</td><td class="r">RM ${m2(f.inn)}</td></tr><tr><td class="i">Total expenses</td><td class="r">RM ${m2(f.spent+f.reserved)}</td></tr>${f.wOut?`<tr><td class="i">Withdrawal refunds</td><td class="r">RM ${m2(f.wOut)}</td></tr>`:''}<tr class="tot"><td class="i"><b>Balance</b></td><td class="r"><b>RM ${m2(f.balance)}</b></td></tr></tbody></table>
+  ${f.X.length?`<div class="sh">FUNDS HANDED TO TREASURERS (not income, shown for reference)</div><table class="ck"><tbody>${f.X.map(l=>`<tr><td style="white-space:nowrap">${fd(l.date)}</td><td class="i">${esc(l.desc||l.cat)}${l.enteredBy?' · '+esc(l.enteredBy):''}</td><td class="r">${m2(l.amount)}</td></tr>`).join('')}<tr class="bd"><td></td><td class="i">Held by treasurers RM ${m2(f.withT)}${f.withChurch>=0?` · held by church RM ${m2(f.withChurch)}`:` · personal claims to repay RM ${m2(-f.withChurch)}`}</td><td></td></tr></tbody></table>`:''}
   <table class="tb" style="margin-top:18pt"><tr><td style="height:40pt"><span>Prepared by (Treasurer / PIC), signature & date</span></td><td><span>Checked by (Church Accounts), signature & date</span></td></tr></table>
-  <div class="ft">TOW Missions Trip &nbsp;|&nbsp; Final Financial Statement &nbsp;|&nbsp; Printed ${fd(new Date().toISOString())}</div></div>`;
-  $('#print').innerHTML=html;log('Printed final statement',`${t.dest} ${yearOf(t)}`);doPrint()}
+  <div class="ft">TOW Missions Trip &nbsp;|&nbsp; ${isClosed(t)?'Final Financial Statement':'Statement of Accounts'} &nbsp;|&nbsp; Printed ${fd(new Date().toISOString())}</div></div>`;
+  $('#print').innerHTML=html;log('Printed statement of accounts',`${t.dest} ${yearOf(t)}`);doPrint()}
+// Simple accounting: every entry by date with a running balance. Handovers to treasurers are listed but don't move the balance.
+function cashBook(t){const f=finance(t);let bal=0;
+  return [...f.A].sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0).map(l=>{const x=isXfer(l),res=l.status==='Reserved',amt=+l.amount||0;
+    if(!x&&!res)bal+=(l.dir==='in'?1:-1)*amt;
+    return {l,date:l.date,desc:l.desc||'',cat:l.cat||'',inn:l.dir==='in'&&!x?amt:0,out:l.dir==='out'?amt:0,xfer:x?amt:0,bal:res?null:bal,note:x?'Handover (not income)':res?'Reserved, not yet paid':l.paidBy==='Personal (claim)'?'Personal claim: '+(l.status||''):'',who:l.enteredBy||'',paidBy:l.paidBy||'',status:l.status||'',source:l.source||''}})}
+function printCashBook(t){const f=finance(t),rows=cashBook(t),n=v=>v?m2(v):'';
+  const html=`<div class="wfp"><img class="lg" src="${LOGO_FULL}" alt=""><div class="tt">CASH BOOK</div><div class="st">${esc(t.dest)} ${yearOf(t)} · ${fr(t.start,t.end)} · Trip code ${esc(t.id)} · As at ${fd(TODAY.toISOString())}</div>
+  <table class="ck"><thead><tr><th>Date</th><th class="i">Description</th><th>Category</th><th class="r">In (RM)</th><th class="r">Out (RM)</th><th class="r">Balance (RM)</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr${r.xfer?' style="color:#666"':''}><td style="white-space:nowrap">${fd(r.date)}</td><td>${esc(r.desc)}${r.note?`<br><i style="font-size:8pt">${esc(r.note)}${r.xfer?' RM '+m2(r.xfer):''}</i>`:''}${r.who?`<br><span style="font-size:8pt;color:#666">by ${esc(r.who)}</span>`:''}</td><td>${esc(r.cat)}</td><td class="r">${n(r.inn)}</td><td class="r">${n(r.out)}</td><td class="r">${r.bal==null?'—':n(r.bal)||'0.00'}</td></tr>`).join('')||'<tr><td colspan="6">No entries</td></tr>'}
+  <tr class="tot"><td></td><td colspan="2"><b>Totals</b></td><td class="r"><b>${n(f.inn)}</b></td><td class="r"><b>${n(f.spent+f.reserved)}</b></td><td class="r"><b>${m2(f.inn-f.spent)}</b></td></tr></tbody></table>
+  ${f.reserved?`<p style="font-size:9pt">Reserved (to pay): RM ${m2(f.reserved)}.</p>`:''}${f.wOut?`<p style="font-size:9pt">Set aside for withdrawal refunds: RM ${m2(f.wOut)}.</p>`:''}<p style="font-size:9pt"><b>Available balance: RM ${m2(f.balance)}</b></p>
+  <div class="ft">TOW Missions Trip &nbsp;|&nbsp; Cash Book &nbsp;|&nbsp; Printed ${fd(new Date().toISOString())}</div></div>`;
+  $('#print').innerHTML=html;log('Printed cash book',`${t.dest} ${yearOf(t)}`);doPrint()}
+const csvOut=rows=>'\ufeff'+rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+const fileBase=t=>`TOW-${String(t.dest||'trip').replace(/[^A-Za-z0-9]+/g,'-')}-${yearOf(t)}`;
+function csvCashBook(t){const m=v=>v?(+v).toFixed(2):'';
+  const rows=[['Date','Description','Category','Money in (RM)','Money out (RM)','Balance (RM)','Handover (RM)','Paid by','Status','Entered by','Source','Note'],
+    ...cashBook(t).map(r=>[r.date,r.desc,r.cat,m(r.inn),m(r.out),r.bal==null?'':r.bal.toFixed(2),m(r.xfer),r.paidBy,r.status,r.who,r.source,r.note])];
+  saveFile(fileBase(t)+'-cash-book.csv',csvOut(rows),'text/csv');log('Exported cash book CSV',`${t.dest} ${yearOf(t)}`)}
+function csvStatement(t){const f=finance(t),m=v=>(+v||0).toFixed(2),rows=[['Statement of Accounts',`${t.dest} ${yearOf(t)}`],['Trip dates',`${t.start} to ${t.end}`],['As at',TODAY.toISOString().slice(0,10)],[],['Section','Category','Amount (RM)']];
+  [['Income','in'],['Expenses','out']].forEach(([lab,dir])=>{const g={};f.L.filter(l=>l.dir===dir).forEach(l=>g[l.cat||'Others']=(g[l.cat||'Others']||0)+(+l.amount||0));
+    Object.entries(g).sort((a,b)=>b[1]-a[1]).forEach(([c,v])=>rows.push([lab,c,m(v)]));rows.push([lab,'Total '+lab.toLowerCase(),m(Object.values(g).reduce((a,v)=>a+v,0))],[])});
+  DB.withdrawals.filter(w=>w.trip===t.id&&w.choice!=='-'&&w.posted!=='Yes').forEach(w=>{const p=wPropose(t,w);if(p.refund>0)rows.push(['Withdrawal refund (proposed)',(REG(w.pid)||{}).name||'',m(p.refund)])});
+  rows.push(['Summary','Total income',m(f.inn)],['Summary','Total expenses',m(f.spent+f.reserved)]);if(f.wOut)rows.push(['Summary','Set aside for withdrawals',m(f.wOut)]);rows.push(['Summary','Balance',m(f.balance)]);
+  if(f.X.length){rows.push([]);f.X.forEach(l=>rows.push(['Handed to treasurer (not income)',`${l.date} ${l.desc||''}`,m(l.amount)]))}
+  saveFile(fileBase(t)+'-statement.csv',csvOut(rows),'text/csv');log('Exported statement CSV',`${t.dest} ${yearOf(t)}`)}
 function printItin(t){const L=(P(t).itin||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.time||'').localeCompare(b.time||''));
   const html=`<div class="wfp"><img class="lg" src="${LOGO_FULL}" alt=""><div class="tt">MISSIONS TRIP ITINERARY</div><div class="st">${esc(t.dest)} ${yearOf(t)} · ${fr(t.start,t.end)}</div>
   <table class="tb"><tr><td><span>Destination</span>${esc(t.dest)}</td><td><span>Trip code</span>${esc(t.id)}</td></tr><tr><td><span>Trip dates</span>${fr(t.start,t.end)}</td><td><span>PIC / A.PIC</span>${esc(t.pic||'')} / ${esc(t.apic||'')}</td></tr></table>
@@ -1258,6 +1288,9 @@ function tFinance(t){
   return `${forms(['finance'])}${modeSwitch(t)}${f.claims.length?`<div class="warn r">${f.claims.length} personal payment${f.claims.length>1?'s':''} waiting to be claimed. Ask treasurers to pay directly next time so no one uses their own money.</div>`:''}
   ${link}
   <div class="money" style="margin-top:20px"><div><span>Money in</span><b>${rm(f.inn)}</b></div><div><span>Spent</span><b>${rm(f.spent)}</b></div><div><span>Reserved (to pay)</span><b>${rm(f.reserved)}</b></div><div><span>${closed?'Surplus to refund':'Balance'}</span><b>${rm(f.balance)}</b>${f.tIn?`<span class="small" style="display:block;margin-top:2px">With treasurers ${rm(f.withT)} · church ${rm(f.withChurch)}</span>`:''}</div></div>
+  <div class="panel reports"><div class="stephead"><h2 style="margin:0">Reports</h2><span class="small muted">PDF: choose "Save as PDF" in the print window</span></div>
+   <div class="rgrid"><div><b>Statement of accounts</b><span class="small muted">Income and expenses by category, with totals and signatures</span><div class="row"><button class="btn sm" data-act="printstmt" data-id="${t.id}">PDF</button><button class="btn sm" data-act="csvstmt" data-id="${t.id}">CSV</button></div></div>
+   <div><b>Cash book</b><span class="small muted">Every entry by date with the running balance</span><div class="row"><button class="btn sm" data-act="printcb" data-id="${t.id}">PDF</button><button class="btn sm" data-act="csvcb" data-id="${t.id}">CSV</button></div></div></div></div>
   ${splitPanel(t)}
   <div class="panel"><div class="stephead"><div class="row">${[['all','All entries'],['in','Money in'],['out','Money out'],['claims','Personal claims'],['link','Via treasurer link'],...(f.X.length?[['xfer','Handed to treasurers']]:[])].map(([k,l])=>`<button class="chip" data-act="filter" data-f="${k}" aria-pressed="${(['in','out','claims','link'].includes(S.f)?S.f:'all')===k}">${l}</button>`).join('')}</div>${ro?`<button class="btn sm pri" data-act="ledger" data-id="${t.id}">Add entry</button>`:''}</div>
   <div class="tbl"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Paid by</th><th>Status</th><th class="num">Credit (in)</th><th class="num">Debit (out)</th><th class="num balc">Running balance</th>${ro?'<th></th>':''}</tr></thead><tbody>
@@ -1728,6 +1761,9 @@ document.addEventListener('click',async e=>{
     case 'ocrm':{const t=T(d.id);P(t).cost.others.splice(+d.i,1);save();render();break}
     case 'printitin':printItin(T(d.id));break;
     case 'printstmt':printStatement(T(d.id));break;
+    case 'printcb':printCashBook(T(d.id));break;
+    case 'csvstmt':csvStatement(T(d.id));break;
+    case 'csvcb':csvCashBook(T(d.id));break;
     case 'sugdue':{const t=T(d.id),D=(DB.due[t.id]=DB.due[t.id]||{});if(d.s==='all'){STAGES.forEach((_,k)=>{if(!D[k])D[k]=sugDue(t,k)})}else D[d.s]=sugDue(t,+d.s);save();render();break}
     case 'remind':modal(vRemind(T(d.id),+d.s),true);break;
     case 'listadd':{const t=T(d.id);(t[d.l]=t[d.l]||[]).push({});save();render();break}

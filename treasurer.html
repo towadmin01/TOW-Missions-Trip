@@ -43,6 +43,7 @@ td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
 .lnk{background:none;border:0;padding:0;color:var(--gold-ink);font-weight:700;font-size:12px;text-decoration:underline;cursor:pointer;width:auto;margin:0}
 .editing{outline:2px solid var(--gold)}.edhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.edhead .lnk{font-size:14px}
 .btn.del{background:none;color:var(--red);border:1px solid var(--red);margin-top:8px}
+.draftnote{background:var(--amber-soft);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:10px}.draftnote .lnk{font-size:14px}
 .pk{display:flex;gap:6px;align-items:center;font-weight:500;margin:0;font-size:14px}.pk input{width:18px;height:18px;padding:0}
 </style>
 </head>
@@ -62,6 +63,15 @@ const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOStr
 let S={name:'',info:null,entries:[]};try{S=Object.assign(S,JSON.parse(localStorage.getItem(SK)||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem(SK,JSON.stringify(S))}catch(e){}};
 let dir='out',busy=false,msg='',forMode='',forSel=new Set(),editId='',fill=false,formDir='';
+// Unsaved typing is kept on the phone, so it survives switching apps, the browser reloading the page, or a dead battery.
+const DK=SK+'-draft';let draft=null,restored=false;try{draft=JSON.parse(localStorage.getItem(DK)||'null')}catch(e){}
+if(draft&&(draft.ds||draft.am)){dir=draft.dir||'out';forMode=draft.forMode||'';forSel=new Set(draft.forSel||[]);editId=draft.editId||''}else draft=null;
+function writeDraft(){const f=$('#ef');if(!f)return;const v={};['dt','ct','ds','am','pb'].forEach(k=>{const el=$('#'+k);if(el)v[k]=el.value});
+  if(!String(v.ds||'').trim()&&!String(v.am||'').trim()&&!editId){dropDraft();return}
+  try{localStorage.setItem(DK,JSON.stringify({...v,dir,forMode,forSel:[...forSel],editId,at:Date.now()}))}catch(e){}}
+function dropDraft(){draft=null;restored=false;try{localStorage.removeItem(DK)}catch(e){}}
+addEventListener('beforeunload',e=>{const ds=$('#ds'),am=$('#am');if((ds&&ds.value.trim())||(am&&am.value)){writeDraft();e.preventDefault();e.returnValue=''}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)writeDraft()});
 const live=()=>S.entries.filter(e=>!e.del);
 
 async function call(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error);return j}
@@ -90,7 +100,7 @@ function merge(list){if(!Array.isArray(list))return;const srv={};list.forEach(x=
   list.forEach(x=>{const e=S.entries.find(y=>y.id===x.id);const locked=x.status!=='Paid'&&x.status!=='Claim pending';
     if(!e)S.entries.push({...x,t:0,sent:true,locked});
     else if(!e.dirty&&!e.del)Object.assign(e,{date:x.date,dir:x.dir,cat:x.cat,desc:x.desc,amount:x.amount,paidBy:x.paidBy,split:x.split,status:x.status,by:x.by,sent:true,locked})})}
-const clearForm=()=>{const f=$('#ef');if(f)f.remove()};
+const clearForm=()=>{const f=$('#ef');if(f)f.remove();dropDraft()};
 const snap=e=>({date:e.date,dir:e.dir,cat:e.cat,desc:e.desc,amount:e.amount,paidBy:e.paidBy,split:e.split});
 const nameOf=id=>((S.info&&S.info.people||[]).find(p=>p.id===id)||{}).name||'1 person';
 function render(){
@@ -122,14 +132,18 @@ function render(){
     <table><thead><tr><th>Date</th><th>Description</th><th class="num">In</th><th class="num">Out</th><th class="num">Balance</th></tr></thead><tbody>
     ${list.map(e=>{bal+=(e.dir==='in'?1:-1)*e.amount;return `<tr><td>${e.date.slice(5)}</td><td>${esc(e.desc)}<br><span class="note">${esc(e.cat)}${e.paidBy==='Personal (claim)'?(e.status==='Claimed'?' · claim settled':' · personal claim'):''}${e.by&&S.info&&!S.info.name&&e.by.toLowerCase()!==String(S.name).toLowerCase()?' · by '+esc(e.by):''}${Array.isArray(e.split)&&e.split.length?' · for '+(e.split.length===1?esc(nameOf(e.split[0])):e.split.length+' people'):''}</span> <span class="${e.sent&&!e.dirty?'s':'q'}">${!e.sent?'Waiting':e.dirty?'Change waiting':'Sent'}</span>${e.locked?'':` <button type="button" class="lnk" data-e="${e.id}">Edit</button>`}</td><td class="num">${e.dir==='in'?rm(e.amount):''}</td><td class="num">${e.dir==='out'?rm(e.amount):''}</td><td class="num">${rm(bal)}</td></tr>`}).reverse().join('')||'<tr><td colspan="5" class="note">No entries yet.</td></tr>'}
     </tbody></table><p class="tiny">Typed something wrong? Tap <b>Edit</b> next to the entry to fix or delete it. Once the church has settled a claim, ask the PIC to change it instead.</p><p class="tiny">Recording as ${esc(S.name)}. Keep every receipt. Pay from team cash so no one needs to claim later.</p><p class="tiny"><b>Tip:</b> add this page to your home screen (Share or ⋮ menu → Add to Home Screen) so it opens even with no signal.</p></div>`;
-  app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{dir=b.dataset.d;render()});
-  app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{forMode=b.dataset.f;render()});
+  app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{dir=b.dataset.d;render();writeDraft()});
+  app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{forMode=b.dataset.f;render();writeDraft()});
   app.querySelectorAll('.plist input').forEach(c=>c.onchange=()=>{c.checked?forSel.add(c.value):forSel.delete(c.value)});
   app.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{const x=S.entries.find(e=>e.id===b.dataset.e);if(!x)return;editId=x.id;dir=x.dir;
     forMode=Array.isArray(x.split)&&x.split.length?(S.info&&x.split.length===1&&x.split[0]===S.info.me?'me':'some'):'all';forSel=new Set(Array.isArray(x.split)?x.split:[]);fill=true;render();scrollTo(0,0)});
   if(ed&&fill){$('#dt').value=ed.date;$('#ct').value=ed.cat;$('#ds').value=ed.desc;$('#am').value=ed.amount;if($('#pb'))$('#pb').value=ed.paidBy||'Team treasurer'}
   else if(keep){Object.keys(keep).forEach(k=>{const el=$('#'+k);if(el&&!(k==='ct'&&keepDir!==dir))el.value=keep[k]})}
+  else if(draft){['dt','ct','ds','am','pb'].forEach(k=>{const el=$('#'+k);if(el&&draft[k]!=null&&draft[k]!=='')el.value=draft[k]});draft=null;restored=true}
+  if(restored){const b=document.createElement('div');b.className='draftnote';b.innerHTML='<b>Not saved yet.</b> We kept what you were typing. Check it and tap <b>'+(ed?'Save changes':'Save entry')+'</b>, or <button type="button" class="lnk" id="dd">clear it</button>.';$('#ef').prepend(b);
+    $('#dd').onclick=()=>{editId='';forMode='';forSel=new Set();clearForm();render()}}
   fill=false;formDir=dir;
+  $('#ef').addEventListener('input',writeDraft);$('#ef').addEventListener('change',writeDraft);
   if(ed){
     $('#cx').onclick=()=>{editId='';forMode='';forSel=new Set();clearForm();render()};
     $('#dl').onclick=()=>{if(!confirm(`Delete "${ed.desc}" (${rm(ed.amount)})?`))return;if(!ed.sent)S.entries=S.entries.filter(x=>x!==ed);else{if(!ed.orig)ed.orig=snap(ed);ed.del=true}editId='';clearForm();save();render();sync()}}
