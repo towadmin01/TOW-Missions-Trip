@@ -45,6 +45,14 @@ td{padding:7px 4px;border-bottom:1px solid var(--line);vertical-align:top}
 .btn.del{background:none;color:var(--red);border:1px solid var(--red);margin-top:8px}
 .draftnote{background:var(--amber-soft);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14px;margin-bottom:10px}.draftnote .lnk{font-size:14px}
 .pk{display:flex;gap:6px;align-items:center;font-weight:500;margin:0;font-size:14px}.pk input{width:18px;height:18px;padding:0}
+
+.pill{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:9999;display:flex;align-items:center;gap:8px;width:max-content;max-width:calc(100vw - 32px);text-align:left;background:#2b2620;color:#fff;font-size:14px;font-weight:600;line-height:1.3;padding:10px 16px;border-radius:999px;box-shadow:0 6px 24px rgba(0,0,0,.25);transition:opacity .2s,transform .2s;border:0;font-family:inherit}
+.pill.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.pill.ok{background:#2f6b3f}.pill.warn{background:#8a5a00}.pill.err{background:#b42318;cursor:pointer}
+.pill.busy::before{content:"";width:14px;height:14px;flex:none;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:pillspin .8s linear infinite}
+.pill.ok::before{content:"✓";font-weight:800}
+@keyframes pillspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pill{transition:none}.pill.busy::before{animation-duration:2s}}
 </style>
 </head>
 <body>
@@ -75,8 +83,19 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)writeDraft(
 const live=()=>S.entries.filter(e=>!e.del);
 
 async function call(body){const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body)});const j=await r.json();if(j.error)throw new Error(j.error);return j}
+// Small status bubble at the bottom of the screen: saving / saved / loading / not saved
+let pillT;
+function pill(text,kind,ms){let el=document.getElementById('pill');if(!el){el=document.createElement('button');el.id='pill';el.type='button';el.className='pill';el.setAttribute('role','status');el.setAttribute('aria-live','polite');document.body.appendChild(el);el.onclick=()=>{if(el.classList.contains('err')&&typeof pillRetry==='function')pillRetry();else el.classList.remove('on')}}
+  clearTimeout(pillT);if(!text){el.classList.remove('on');return}
+  el.textContent=text;el.className='pill on '+(kind||'busy');if(ms)pillT=setTimeout(()=>el.classList.remove('on'),ms)}
+const pillRetry=()=>sync();
+const pending=()=>S.entries.filter(e=>!e.sent||e.dirty||e.del).length;
 async function sync(){
-  if(busy||!API||!navigator.onLine)return;busy=true;
+  if(busy||!API)return;
+  if(!navigator.onLine){if(pending())pill('Saved on this phone. It will send when you are back online','warn',3500);return}
+  busy=true;const n=pending(),first=!S.info;
+  if(n)pill(n>1?`Sending ${n} entries to the church records…`:'Sending to the church records…','busy');else if(first)pill('Loading entries…','busy');
+  let ok=true;
   try{
     S.info=await call({action:'tInfo',trip:TRIP,key:KEY});merge(S.info.entries);delete S.info.entries;save();
     const q=S.entries.filter(e=>!e.sent);
@@ -87,8 +106,11 @@ async function sync(){
       (j.done||[]).forEach(id=>{const e=S.entries.find(x=>x.id===id);if(!e)return;if(e.del)S.entries=S.entries.filter(x=>x!==e);else{e.dirty=false;delete e.orig}});
       (j.skipped||[]).forEach(k=>{const e=S.entries.find(x=>x.id===k.id);if(!e)return;if(e.orig)Object.assign(e,e.orig);delete e.orig;e.dirty=false;e.del=false;e.locked=true;msg=k.why==='not a link entry'?'One change could not be saved because the entry is not from this link.':k.why});
       save()}
-  }catch(e){msg=(e instanceof TypeError||/fetch|network|load failed/i.test(e.message))?'':e.message}
-  busy=false;render();
+  }catch(e){ok=false;const net=e instanceof TypeError||/fetch|network|load failed/i.test(e.message);msg=net?'':e.message;
+    pill(net?'Not sent yet (no connection). Saved on this phone, will try again':'Not saved: '+e.message,net?'warn':'err',net?4000:0)}
+  busy=false;
+  if(ok){const left=pending();if(n&&!left)pill('Saved to the church records','ok',2000);else if(n&&left)pill('Some changes are still waiting. Tap to try again','err');else if(first)pill('')}
+  render();
 }
 // Split trips: say who an expense was for, so each person's refund is fair
 function forUI(){const I=S.info,mode=forMode||(I.me?'me':'all');

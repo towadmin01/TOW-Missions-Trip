@@ -442,6 +442,18 @@ tr.cancel td{color:var(--muted)}
 .wdp{border-left:3px solid var(--amber)}.wdp td:nth-child(3){min-width:200px}.wdp td:first-child{white-space:nowrap}.wbd{margin-top:6px;min-width:220px}.wbd summary{cursor:pointer;color:var(--accent,#9a7b3c);font-weight:600}.wbd table{margin:6px 0;width:100%;max-width:380px}.wbd td,.wbd th{padding:3px 6px}.wdp.done{border-left-color:var(--green)}
 
 .reports .rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.reports .rgrid>div{display:flex;flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}.reports .row{margin-top:6px;gap:8px}
+
+.closebar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;background:var(--amber-soft,#fdf3dc);border:1px solid var(--amber,#d9a21b);border-radius:12px;padding:12px 14px;margin-bottom:14px}.closebar.late{background:var(--red-soft,#fdecea);border-color:var(--red,#b42318)}.closebar>div:first-child{display:flex;flex-direction:column;gap:2px;flex:1 1 260px}.closebar .row{gap:8px}
+
+.rem{border-left:3px solid var(--amber,#d9a21b)}.remrow{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.remrow:first-of-type{border-top:0}.remrow>div:first-child{display:flex;flex-direction:column;gap:2px;flex:1 1 240px}.remrow .row{gap:8px;align-items:center}.remrow.sent>div:first-child{opacity:.6}
+
+.pill{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:9999;display:flex;align-items:center;gap:8px;width:max-content;max-width:calc(100vw - 32px);text-align:left;background:#2b2620;color:#fff;font-size:14px;font-weight:600;line-height:1.3;padding:10px 16px;border-radius:999px;box-shadow:0 6px 24px rgba(0,0,0,.25);transition:opacity .2s,transform .2s;border:0;font-family:inherit}
+.pill.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.pill.ok{background:#2f6b3f}.pill.warn{background:#8a5a00}.pill.err{background:#b42318;cursor:pointer}
+.pill.busy::before{content:"";width:14px;height:14px;flex:none;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:pillspin .8s linear infinite}
+.pill.ok::before{content:"✓";font-weight:800}
+@keyframes pillspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pill{transition:none}.pill.busy::before{animation-duration:2s}}
 </style>
 </head>
 <body>
@@ -599,14 +611,23 @@ async function flush(){
   catch(e){Q.unshift(...ops);setSync('Not saved. Tap to retry','err')}
   flushing=false;if(Q.length&&!/Not saved/.test(S.sync))flush();
 }
-function setSync(text,cls){S.sync=text;S.syncCls=cls;const el=$('#sync');if(el){el.textContent=text;el.className='sync '+(cls||'')}const d=$('.sdot');if(d){d.className='sdot '+(cls||'');d.title=text}}
+// Small status bubble at the bottom of the screen: saving / saved / loading / not saved
+let pillT;
+function pill(text,kind,ms){let el=document.getElementById('pill');if(!el){el=document.createElement('button');el.id='pill';el.type='button';el.className='pill';el.setAttribute('role','status');el.setAttribute('aria-live','polite');document.body.appendChild(el);el.onclick=()=>{if(el.classList.contains('err')&&typeof pillRetry==='function')pillRetry();else el.classList.remove('on')}}
+  clearTimeout(pillT);if(!text){el.classList.remove('on');return}
+  el.textContent=text;el.className='pill on '+(kind||'busy');if(ms)pillT=setTimeout(()=>el.classList.remove('on'),ms)}
+const pillRetry=()=>{if(/Not saved/.test(S.sync)){setSync('Saving…','');flush()}};
+function setSync(text,cls){S.sync=text;S.syncCls=cls;
+  if(/^Saving/.test(text))pill('Saving…','busy');else if(cls==='ok')pill('Saved to Google Sheet','ok',1800);else if(cls==='err')pill('Not saved. Tap here to try again','err');
+  const el=$('#sync');if(el){el.textContent=text;el.className='sync '+(cls||'')}const d=$('.sdot');if(d){d.className='sdot '+(cls||'');d.title=text}}
 async function api(action,payload){
   const r=await fetch(BE(),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action,token:S.token},payload||{}))});
   const j=await r.json();
   if(j.error){if(j.error==='expired'){S.token=null;S.user=null;try{sessionStorage.removeItem('towmt-sess');localStorage.removeItem('towmt-sess')}catch(e){}render();throw new Error('Your session expired. Please sign in again.')}throw new Error(j.error)}
   return j;
 }
-async function loadRemote(pre){
+async function loadRemote(pre,quiet){const show=!pre&&!quiet;if(show)pill('Loading latest from Google Sheet…','busy');try{return await loadRemote_(pre)}finally{if(show)pill('')}}
+async function loadRemote_(pre){
   setSync('Loading…','');
   const j=pre||await api('load');
   const keep=DB.settings;DB=emptyDB();DB.settings=keep;
@@ -725,8 +746,40 @@ function tripHistory(r){return DB.regs.filter(x=>pkey(x)===pkey(r)&&x.status==='
 const tchips=(rs,cur)=>`<div class="tchips">${rs.map(x=>{const t=T(x.trip);return `<span class="tchip ${x.trip===cur?'now':''}">${esc(t.dest)} ${yearOf(t)}</span>`}).join('')}</div>`;
 function formBtn(id,label){const f=FORMS[id];if(!f)return '';return `<button class="btn sm" data-act="form" data-f="${id}">⬇ ${esc(label||f.title)} (PDF)</button>`}
 const forms=ids=>ids.length?`<div class="formsbar"><span>Forms</span>${ids.map(i=>`<button class="link" data-act="form" data-f="${i}">${esc(FORMS[i].title)} ↓</button>`).join('')}</div>`:'';
+// After the trip: what's still needed to close it, and the date we ask for it by (Step 9 due date, or 14 days after the trip)
+const CLOSE_DAYS=14;
+const ended=t=>!isCancelled(t)&&!isClosed(t)&&new Date(t.end)<TODAY;
+const daysSince=d=>Math.round((TODAY-new Date(d))/864e5);
+function closeBy(t){const d=(DB.due[t.id]||{})[8];if(d)return d;const z=new Date(t.end);z.setDate(z.getDate()+CLOSE_DAYS);return z.toISOString().slice(0,10)}
+function closeLeft(t){const o={c_report:0,c_media:1};return items(t,8).filter(x=>!isDone(t,x.key)).sort((a,b)=>(o[a.key]??9)-(o[b.key]??9))}
+// ---- WhatsApp reminders to send today (same schedule the emails used) ----
+const isoAdd=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+const todayIso=()=>TODAY.toISOString().slice(0,10);
+function remindTrig(t,s){ // latest reminder date on or before today, or ''
+  if(s==='close'){const n=daysSince(t.end);return n>=7?isoAdd(t.end,Math.floor(n/7)*7):n>=3?isoAdd(t.end,3):''}
+  const due=(DB.due[t.id]||{})[s];if(!due||stageProg(t,s).full)return '';const d=Math.round((new Date(due)-TODAY)/864e5);
+  return d>3?'':d>=2?isoAdd(due,-3):d===1?isoAdd(due,-1):d===0?due:isoAdd(due,3*Math.floor(-d/3))}
+function remindsToday(){const out=[];
+  DB.trips.filter(t=>!isCancelled(t)&&!isClosed(t)).forEach(t=>{const sent=P(t).remind||{};
+    if(ended(t)){const tr=remindTrig(t,'close');if(tr&&((sent.close||'')<tr||sent.close===todayIso()))out.push({t,s:8,key:'close',trig:tr,done:sent.close===todayIso(),label:`Trip ended ${daysSince(t.end)} days ago – please close it`});return}
+    for(let s=0;s<9;s++){const tr=remindTrig(t,s);if(tr&&((sent['s'+s]||'')<tr||sent['s'+s]===todayIso())){const due=(DB.due[t.id]||{})[s],d=Math.round((new Date(due)-TODAY)/864e5);
+      out.push({t,s,key:'s'+s,trig:tr,done:sent['s'+s]===todayIso(),label:`Step ${s+1} ${STAGES[s][0]} ${d<0?`overdue by ${-d} day${d<-1?'s':''}`:d===0?'due today':`due in ${d} day${d>1?'s':''}`}`})}}});
+  return out.sort((a,b)=>(a.done-b.done)||(a.trig<b.trig?-1:1))}
+const remKey=(t,s)=>s===8&&ended(t)?'close':'s'+s;
+function waNum(t,nm){const r=nm&&regsOf(t).find(r=>r.name.toLowerCase()===String(nm).toLowerCase());let m=r&&String(r.mobile||'').replace(/\D/g,'');if(m&&m[0]==='0')m='6'+m;return m||''}
+function remindPanel(){if(!can('all'))return '';const L=remindsToday();if(!L.length)return '';
+  return `<div class="panel rem"><div class="stephead"><h2 style="margin:0">Reminders to send today ${L.some(x=>!x.done)?`<span class="badge b-amber">${L.filter(x=>!x.done).length}</span>`:'<span class="badge b-green">all sent</span>'}</h2><span class="small muted">Tap WhatsApp, press Send. It's ticked off here.</span></div>
+  ${L.map(x=>{const t=x.t,msg=remindMsg(t,x.s),wa=(lab,nm)=>nm?`<a class="btn sm ${lab==='PIC'&&!x.done?'pri':''}" data-act="remsent" data-id="${t.id}" data-k="${x.key}" href="https://wa.me/${waNum(t,nm)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp ${lab}</a>`:'';
+    return `<div class="remrow ${x.done?'sent':''}"><div><b>${esc(t.dest)} ${yearOf(t)}</b><span class="small">${esc(x.label)}</span><span class="small muted">PIC ${esc(t.pic||'not set')}${t.apic?' · A.PIC '+esc(t.apic):''}</span></div>
+    <div class="row">${wa('PIC',t.pic)}${wa('A.PIC',t.apic)}<button class="link small" data-act="remind" data-id="${t.id}" data-s="${x.s}">Preview</button>${x.done?'<span class="badge b-green">Sent today</span>':`<button class="link small" data-act="remsent" data-id="${t.id}" data-k="${x.key}">Mark as sent</button>`}</div></div>`}).join('')}</div>`}
+function closeBanner(t){if(!ended(t))return '';const n=daysSince(t.end),by=closeBy(t),late=new Date(by)<TODAY,left=closeLeft(t);
+  return `<div class="closebar ${late?'late':''}"><div><b>Trip ended ${n} day${n===1?'':'s'} ago. Waiting to be closed.</b><span class="small">${late?`Was due ${fd(by)}`:`Please close by ${fd(by)}`}${left.length?' · Still to do: '+left.slice(0,3).map(x=>esc(x.text.replace(/\s*\(.*\)$/,''))).join(', ')+(left.length>3?` +${left.length-3} more`:''):''}</span></div>
+  <div class="row">${S.tab!=='workflow'||curStage(t)!==8?`<button class="btn sm" data-act="goto" data-id="${t.id}" data-tab="workflow" data-s="8" data-f="all">Open Step 9</button>`:''}<button class="btn sm pri" data-act="remind" data-id="${t.id}" data-s="8">Remind PIC to close</button></div></div>`}
 function attention(t){
   const out=[],s=curStage(t),c=conf(t);if(isCancelled(t))return out;
+  if(ended(t)){const n=daysSince(t.end),late=new Date(closeBy(t))<TODAY,left=closeLeft(t).map(x=>x.key);
+    const what=[left.includes('c_report')&&'report',left.includes('c_media')&&'photos/videos'].filter(Boolean);
+    out.push({sev:late||n>=7?'r':'w',text:`Ended ${n} day${n===1?'':'s'} ago, not closed yet${what.length?' (no '+what.join(' or ')+')':''}`,go:{tab:'workflow',s:8}})}
   if(isUpcoming(t)){
     const un=c.filter(r=>paidOf(r)<t.fee).length;
     if(s>=3&&un)out.push({sev:'r',text:`${un} participant${un>1?'s':''} not yet paid in full`,go:{tab:'people',f:'unpaid'}});
@@ -838,7 +891,7 @@ function vOverview(){
   const ys=years();
   return `<div class="pagehead"><div><h1>Overview</h1><p class="sub">${ts.length} trip${ts.length!==1?'s':''} in ${S.year} · ${pax} people · ${rm(funds)} received · ${ov} overseas, ${ts.length-ov} local</p></div>
     <div class="row">${can('all')&&S.sheetUrl?`<a class="btn sm" href="${esc(S.sheetUrl)}" target="_blank" rel="noopener">Open Google Sheet ↗</a>`:''}<select class="inp ysel" data-pf="year" aria-label="Year">${ys.map(y=>`<option ${y===S.year?'selected':''}>${y}</option>`).join('')}</select></div></div>
-  ${attnChips(pick)}
+  ${remindPanel()}${attnChips(pick)}
   <div class="grid2"><div class="stack">
     <div class="panel"><div class="stephead"><h2>Trips in ${S.year}</h2><span class="small muted">Bar = people going. Tap a trip.</span></div>
     ${all.length?`<div class="hbars">${all.map(t=>{const n=conf(t).length,c=isCancelled(t);return `<button class="hbar ${t===pick?'on':''} ${c?'cx':''}" data-act="ovsel" data-id="${t.id}" aria-pressed="${t===pick}"><span class="hl"><b>${esc(t.dest)}</b><i>${fr(t.start,t.end)}${c?' · cancelled':''}</i></span><span class="ht"><span class="hf" style="width:${c?0:Math.max(2,n/max*100)}%"></span></span><span class="hv">${n} <i>going</i></span></button>`}).join('')}</div>`:`<p class="empty">No trips for ${S.year} yet.${can('all')?' <button class="link" data-act="newtrip">Add a trip</button>':''}</p>`}</div>
@@ -1017,7 +1070,7 @@ function mediaBox(t){
   return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
 }
 const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
-const APP_VER='6.7';
+const APP_VER='6.10';
 // User IDs: spaces become dots, other symbols are dropped (e.g. "Mary Tan" → "mary.tan")
 const cleanId=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[.]|[.]$/g,'');
 const regLink=()=>((DB.forms||{}).regform||'').trim();
@@ -1110,10 +1163,10 @@ function tWorkflow(t,s){
   const after={5:`<div class="form" style="margin-top:12px"><div class="full"><label>Outstanding matters</label><textarea class="inp" rows="3" data-set="plan|${t.id}|outstanding" placeholder="Anything still open after this meeting" ${ro}>${esc(p.outstanding||'')}</textarea></div></div>`};
   let fw=FLOW_WF;for(let i=0;i<9;i++){const cls=isClosed(t)||stageProg(t,i).full?'dn':i===curStage(t)?'cur':'';if(cls)fw=fw.replace(`<g data-act="stage" data-s="${i}"`,`<g class="${cls}" data-act="stage" data-s="${i}"`)}
   const sg=sugDue(t,s);
-  return `${adminSetup(t)}<details class="panel flow" ${S.flowOpen===true||(S.flowOpen!==false&&innerWidth>700)?'open':''} data-flow><summary>Workflow at a glance</summary><div class="flowwrap">${fw}</div><p class="small muted" style="margin:8px 0 0;text-align:center">Tap a step to open it. Faded = done, dark outline = current step.</p></details>
+  return `${closeBanner(t)}${adminSetup(t)}<details class="panel flow" ${S.flowOpen===true||(S.flowOpen!==false&&innerWidth>700)?'open':''} data-flow><summary>Workflow at a glance</summary><div class="flowwrap">${fw}</div><p class="small muted" style="margin:8px 0 0;text-align:center">Tap a step to open it. Faded = done, dark outline = current step.</p></details>
   <div class="panel step"><div class="stephead"><h2>Step ${s+1}: ${STAGES[s][1]}</h2>
-    <div class="duebox ${due?'':'nodue'}"><label for="due">Due</label><input class="duein" type="date" id="due" value="${due}" data-set="due|${t.id}|${s}" ${ro}>${!due&&sg&&ed?`<button class="link small" data-act="sugdue" data-id="${t.id}" data-s="${s}">Use ${fd(sg)}</button>`:''}${due?`<a class="small" href="${gStep(t,s)}" target="_blank" rel="noopener" title="Add to Google Calendar">📅</a><button class="link small" data-act="remind" data-id="${t.id}" data-s="${s}">Remind PIC</button>`:''}</div></div>
-  ${!due?'<p class="small" style="color:var(--red);margin:-4px 0 10px">Set a due date so the PIC and A.PIC get reminders.</p>':''}
+    <div class="duebox ${due?'':'nodue'}"><label for="due">Due</label><input class="duein" type="date" id="due" value="${due}" data-set="due|${t.id}|${s}" ${ro}>${!due&&sg&&ed?`<button class="link small" data-act="sugdue" data-id="${t.id}" data-s="${s}">Use ${fd(sg)}</button>`:''}${due?`<a class="small" href="${gStep(t,s)}" target="_blank" rel="noopener" title="Add to Google Calendar">📅</a>`:''}${due||(s===8&&ended(t))?`<button class="link small" data-act="remind" data-id="${t.id}" data-s="${s}">Remind PIC</button>`:''}</div></div>
+  ${!due&&!(s===8&&ended(t))?'<p class="small" style="color:var(--red);margin:-4px 0 10px">Set a due date so the PIC and A.PIC get reminders.</p>':''}
   ${forms(STAGES[s][3]||[])}${extra[s]||''}
   <ul class="check">${its.map(x=>{const c=chk(t,x.key),auto=!!AUTO[x.key],done=isDone(t,x.key);let side='',blk='',rk='';
     if(x.bind==='pic'||x.bind==='apic'){const nm=t[x.bind],r=nm&&regsOf(t).find(r=>r.name.toLowerCase()===nm.toLowerCase());side=`<span class="pwrap"><input class="pinp" placeholder="Name of ${x.bind==='pic'?'PIC':'A.PIC'}" list="names-${t.id}" value="${esc(nm)}" data-set="trip|${t.id}|${x.bind}" ${ro}>${r?`<button class="link small" data-act="profile" data-id="${r.id}">Profile</button>`:''}</span>`}
@@ -1135,13 +1188,20 @@ function adminSetup(t){if(!can('all')||isClosed(t)||isCancelled(t))return '';con
   <li class="small muted" style="padding-left:30px">Then assign the PIC and A.PIC user accounts to this trip in Admin › Users › Access.</li></ul></div>`}
 function getPath(o,path){return path.split('.').reduce((a,k)=>a==null?undefined:a[k],o)}
 function setPath(o,path,v){const ks=path.split('.');let a=o;ks.slice(0,-1).forEach((k,i)=>{const nx=/^\d+$/.test(ks[i+1]);if(a[k]==null||typeof a[k]!=='object')a[k]=nx?[]:{};a=a[k]});a[ks[ks.length-1]]=v}
-function vRemind(t,s){const due=(DB.due[t.id]||{})[s],left=items(t,s).filter(x=>!isDone(t,x.key)),d=Math.round((new Date(due)-TODAY)/864e5);
-  const msg=[`*Reminder – ${t.dest} ${yearOf(t)}*`,`Step ${s+1}: ${STAGES[s][1]} is due ${fd(due)}${d<0?` (${-d} day${d<-1?'s':''} overdue)`:d===0?' (today)':` (in ${d} day${d>1?'s':''})`}.`,left.length?'Still to do:\n'+left.map(x=>'• '+x.text).join('\n'):'All items are done – please tick them in the app.','',`Open the app: ${appUrl()}`].join('\n');
+function remindMsg(t,s){const co=s===8&&ended(t),due=co?closeBy(t):(DB.due[t.id]||{})[s],left=items(t,s).filter(x=>!isDone(t,x.key)),d=Math.round((new Date(due)-TODAY)/864e5);
+  const tx=k=>left.some(x=>x.key===k),media=(t.media||'').trim();
+  const msg=co?[`*Please close the trip – ${t.dest} ${yearOf(t)}*`,`Hi! The trip ended on ${fd(t.end)} (${daysSince(t.end)} day${daysSince(t.end)===1?'':'s'} ago). Thank you for leading it 🙏`,
+    `Please help close it ${d<0?`as soon as possible (it was due ${fd(due)})`:`by ${fd(due)}`}:`,
+    [tx('c_report')&&'• Submit the mission report (in the app, Report tab)',tx('c_media')&&`• Upload the photos & videos to the trip folder${media?':\n  '+media:''}`,
+     ...left.filter(x=>!['c_report','c_media'].includes(x.key)).map(x=>'• '+x.text)].filter(Boolean).join('\n')||'Everything looks done – please tick the last items in the app so the trip can be closed.',
+    '',`Open the app: ${appUrl()}`].join('\n'):[`*Reminder – ${t.dest} ${yearOf(t)}*`,`Step ${s+1}: ${STAGES[s][1]} is due ${fd(due)}${d<0?` (${-d} day${d<-1?'s':''} overdue)`:d===0?' (today)':` (in ${d} day${d>1?'s':''})`}.`,left.length?'Still to do:\n'+left.map(x=>'• '+x.text).join('\n'):'All items are done – please tick them in the app.','',`Open the app: ${appUrl()}`].join('\n');
+  return msg}
+function vRemind(t,s){const co=s===8&&ended(t),msg=remindMsg(t,s),k=remKey(t,s),last=(P(t).remind||{})[k];
   const ph=nm=>{const r=nm&&regsOf(t).find(r=>r.name.toLowerCase()===String(nm).toLowerCase());let m=r&&String(r.mobile||'').replace(/\D/g,'');if(m&&m[0]==='0')m='6'+m;return m||''};
-  const b=(lab,nm)=>{const m=ph(nm);return nm?`<a class="btn ${lab==='PIC'?'pri':''}" href="https://wa.me/${m}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp ${lab} (${esc(nm)})</a>`:''};
-  return `<div class="sheethead"><div><h2>Send a reminder</h2><p class="sub">${esc(t.dest)} ${yearOf(t)} · Step ${s+1}</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
+  const b=(lab,nm)=>{const m=ph(nm);return nm?`<a class="btn ${lab==='PIC'?'pri':''}" data-act="remsent" data-id="${t.id}" data-k="${k}" href="https://wa.me/${m}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp ${lab} (${esc(nm)})</a>`:''};
+  return `<div class="sheethead"><div><h2>Send a reminder</h2><p class="sub">${esc(t.dest)} ${yearOf(t)} · ${co?'Close the trip':'Step '+(s+1)}</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
   <pre class="regmsg">${esc(msg)}</pre><div class="row" style="margin-top:12px">${b('PIC',t.pic)}${b('A.PIC',t.apic)}<button class="btn" data-act="copy" data-v="${esc(msg)}">Copy message</button></div>
-  <p class="small muted" style="margin:10px 0 0">PICs with an email in their user account also get an automatic email 3 days before, on the due day, and every 3 days while overdue.</p>`}
+  <p class="small muted" style="margin:10px 0 0">${last?`Last reminder sent ${fd(last)}. `:''}${co?'This reminder comes up again on your Overview 3 and 7 days after the trip, then every week until the trip is closed.':'This reminder comes up on your Overview 3 days and 1 day before, on the due day, and every 3 days while overdue.'}</p>`}
 const m2=v=>(+v||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
 function printStatement(t){const f=finance(t),inn=f.L.filter(l=>l.dir==='in'),out=f.L.filter(l=>l.dir==='out'),W=DB.withdrawals.filter(w=>w.trip===t.id&&w.choice!=='-'&&w.posted!=='Yes'&&wPropose(t,w).refund>0);
   const grp=L=>{const g={};L.forEach(l=>(g[l.cat||'Others']=g[l.cat||'Others']||[]).push(l));return g};
@@ -1766,6 +1826,8 @@ document.addEventListener('click',async e=>{
     case 'csvcb':csvCashBook(T(d.id));break;
     case 'sugdue':{const t=T(d.id),D=(DB.due[t.id]=DB.due[t.id]||{});if(d.s==='all'){STAGES.forEach((_,k)=>{if(!D[k])D[k]=sugDue(t,k)})}else D[d.s]=sugDue(t,+d.s);save();render();break}
     case 'remind':modal(vRemind(T(d.id),+d.s),true);break;
+    case 'remsent':{const t=T(d.id),pl=P(t);pl.remind=pl.remind||{};pl.remind[d.k]=todayIso();save();log('WhatsApp reminder sent',`${t.dest} ${yearOf(t)} · ${d.k==='close'?'close the trip':'Step '+(+d.k.slice(1)+1)}`);
+      setTimeout(()=>{if(!b.closest('#modal'))render();toast('Marked as sent')},400);break}
     case 'listadd':{const t=T(d.id);(t[d.l]=t[d.l]||[]).push({});save();render();break}
     case 'listrm':{const t=T(d.id);t[d.l].splice(+d.i,1);save();render();break}
     case 'copy':try{await navigator.clipboard.writeText(d.v);b.textContent='Copied'}catch(x){prompt('Copy this link',d.v)}break;
@@ -1882,7 +1944,7 @@ try{if(localStorage.getItem('towmt-flow')==='0')S.flowOpen=false}catch(e){}
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.hasAttribute&&e.target.hasAttribute('data-rmk')){e.preventDefault();e.target.blur();return}if(e.key==='Escape'&&S.rmk){S.rmk=null;render();return}if(e.key==='Escape'&&$('#modal').innerHTML){closeModal();render()}});
 
 function idle(){const a=document.activeElement;return !$('#modal').innerHTML&&!Q.length&&!flushing&&!(a&&/INPUT|TEXTAREA|SELECT/.test(a.tagName))}
-async function refresh(){if(!BE()||!S.token||!idle())return;try{await loadRemote();if(idle())render()}catch(e){}}
+async function refresh(){if(!BE()||!S.token||!idle())return;try{await loadRemote(null,true);if(idle())render()}catch(e){}}
 setInterval(refresh,120000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
 /* =================== start =================== */
