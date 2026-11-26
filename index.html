@@ -518,6 +518,8 @@ main{--acc:var(--ol-ink);--acc-soft:var(--ol-soft)}.panel.sec{border-top:3px sol
 .fcard details{width:100%;margin-top:4px}.fcard summary{cursor:pointer;color:var(--muted);font-weight:600}.fcard details input{margin-top:6px;width:100%}
 @media (max-width:900px){.ttabs.admtabs .tl small{display:none}}
 @media (max-width:600px){.regcard{grid-template-columns:1fr}}
+
+.remmsg{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:14px;line-height:1.5;background:var(--sunk);border-radius:12px;padding:14px 16px;max-height:55vh;overflow:auto}
 </style>
 </head>
 <body>
@@ -814,8 +816,10 @@ const forms=ids=>ids.length?`<div class="formsbar"><span>Forms</span>${ids.map(i
 const CLOSE_DAYS=14;
 const ended=t=>!isCancelled(t)&&!isClosed(t)&&new Date(t.end)<TODAY;
 const daysSince=d=>Math.round((TODAY-new Date(d))/864e5);
-function closeBy(t){const d=(DB.due[t.id]||{})[8];if(d)return d;const z=new Date(t.end);z.setDate(z.getDate()+CLOSE_DAYS);return z.toISOString().slice(0,10)}
-function closeLeft(t){const o={c_report:0,c_media:1};return items(t,8).filter(x=>!isDone(t,x.key)).sort((a,b)=>(o[a.key]??9)-(o[b.key]??9))}
+function closeBy(t){const d=(DB.due[t.id]||{})[8];if(d&&d>=String(t.end).slice(0,10))return d;const z=new Date(t.end);z.setDate(z.getDate()+CLOSE_DAYS);return z.toISOString().slice(0,10)}
+const hasReport=t=>Object.entries(DB.reports[t.id]||{}).some(([k,v])=>k!=='submitted'&&typeof v==='string'&&v.trim().length>=20);
+const repLeft=t=>!isDone(t,'c_report')||!hasReport(t);
+function closeLeft(t){const o={c_report:0,c_media:1};return items(t,8).filter(x=>x.key==='c_report'?repLeft(t):!isDone(t,x.key)).sort((a,b)=>(o[a.key]??9)-(o[b.key]??9))}
 // ---- WhatsApp reminders to send today (same schedule the emails used) ----
 const isoAdd=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
 const todayIso=()=>TODAY.toISOString().slice(0,10);
@@ -833,7 +837,7 @@ const remKey=(t,s)=>s===8&&ended(t)?'close':'s'+s;
 function waNum(t,nm){const r=nm&&regsOf(t).find(r=>r.name.toLowerCase()===String(nm).toLowerCase());let m=r&&String(r.mobile||'').replace(/\D/g,'');if(m&&m[0]==='0')m='6'+m;return m||''}
 function remindPanel(){if(!can('all'))return '';const L=remindsToday();if(!L.length)return '';
   return `<div class="panel rem"><div class="stephead"><h2 style="margin:0">Reminders to send today ${L.some(x=>!x.done)?`<span class="badge b-amber">${L.filter(x=>!x.done).length}</span>`:'<span class="badge b-green">all sent</span>'}</h2><span class="small muted">Tap WhatsApp, press Send. It's ticked off here.</span></div>
-  ${L.map(x=>{const t=x.t,msg=remindMsg(t,x.s),wa=(lab,nm)=>nm?`<a class="btn sm ${lab==='PIC'&&!x.done?'pri':''}" data-act="remsent" data-id="${t.id}" data-k="${x.key}" href="https://wa.me/${waNum(t,nm)}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp ${lab}</a>`:'';
+  ${L.map(x=>{const t=x.t,wa=(lab,nm)=>nm?`<a class="btn sm ${lab==='PIC'&&!x.done?'pri':''}" data-act="remsent" data-id="${t.id}" data-k="${x.key}" href="https://wa.me/${waNum(t,nm)}?text=${encodeURIComponent(remindMsg(t,x.s,nm))}" target="_blank" rel="noopener">WhatsApp ${lab}</a>`:'';
     return `<div class="remrow ${x.done?'sent':''}"><div><b>${esc(t.dest)} ${yearOf(t)}</b><span class="small">${esc(x.label)}</span><span class="small muted">PIC ${esc(t.pic||'not set')}${t.apic?' · A.PIC '+esc(t.apic):''}</span></div>
     <div class="row">${wa('PIC',t.pic)}${wa('A.PIC',t.apic)}<button class="link small" data-act="remind" data-id="${t.id}" data-s="${x.s}">Preview</button>${x.done?'<span class="badge b-green">Sent today</span>':`<button class="link small" data-act="remsent" data-id="${t.id}" data-k="${x.key}">Mark as sent</button>`}</div></div>`}).join('')}</div>`}
 function closeBanner(t){if(!ended(t))return '';const n=daysSince(t.end),by=closeBy(t),late=new Date(by)<TODAY,left=closeLeft(t);
@@ -842,7 +846,7 @@ function closeBanner(t){if(!ended(t))return '';const n=daysSince(t.end),by=close
 function attention(t){
   const out=[],s=curStage(t),c=conf(t);if(isCancelled(t))return out;
   if(ended(t)){const n=daysSince(t.end),late=new Date(closeBy(t))<TODAY,left=closeLeft(t).map(x=>x.key);
-    const what=[left.includes('c_report')&&'report',left.includes('c_media')&&'photos/videos'].filter(Boolean);
+    const what=[repLeft(t)&&'report',left.includes('c_media')&&'photos/videos'].filter(Boolean);
     out.push({sev:late||n>=7?'r':'w',text:`Ended ${n} day${n===1?'':'s'} ago, not closed yet${what.length?' (no '+what.join(' or ')+')':''}`,go:{tab:'workflow',s:8}})}
   if(isUpcoming(t)){
     const un=c.filter(r=>paidOf(r)<t.fee).length;
@@ -1303,19 +1307,32 @@ function adminSetup(t){if(!can('all')||isClosed(t)||isCancelled(t))return '';con
   <li class="small muted" style="padding-left:30px">Then assign the PIC and A.PIC user accounts to this trip in Admin › Users › Access.</li></ul></div>`}
 function getPath(o,path){return path.split('.').reduce((a,k)=>a==null?undefined:a[k],o)}
 function setPath(o,path,v){const ks=path.split('.');let a=o;ks.slice(0,-1).forEach((k,i)=>{const nx=/^\d+$/.test(ks[i+1]);if(a[k]==null||typeof a[k]!=='object')a[k]=nx?[]:{};a=a[k]});a[ks[ks.length-1]]=v}
-function remindMsg(t,s){const co=s===8&&ended(t),due=co?closeBy(t):(DB.due[t.id]||{})[s],left=items(t,s).filter(x=>!isDone(t,x.key)),d=Math.round((new Date(due)-TODAY)/864e5);
-  const tx=k=>left.some(x=>x.key===k),media=(t.media||'').trim();
-  const msg=co?[`*Please close the trip – ${t.dest} ${yearOf(t)}*`,`Hi! The trip ended on ${fd(t.end)} (${daysSince(t.end)} day${daysSince(t.end)===1?'':'s'} ago). Thank you for leading it 🙏`,
-    `Please help close it ${d<0?`as soon as possible (it was due ${fd(due)})`:`by ${fd(due)}`}:`,
-    [tx('c_report')&&'• Submit the mission report (in the app, Report tab)',tx('c_media')&&`• Upload the photos & videos to the trip folder${media?':\n  '+media:''}`,
-     ...left.filter(x=>!['c_report','c_media'].includes(x.key)).map(x=>'• '+x.text)].filter(Boolean).join('\n')||'Everything looks done – please tick the last items in the app so the trip can be closed.',
-    '',`Open the app: ${appUrl()}`].join('\n'):[`*Reminder – ${t.dest} ${yearOf(t)}*`,`Step ${s+1}: ${STAGES[s][1]} is due ${fd(due)}${d<0?` (${-d} day${d<-1?'s':''} overdue)`:d===0?' (today)':` (in ${d} day${d>1?'s':''})`}.`,left.length?'Still to do:\n'+left.map(x=>'• '+x.text).join('\n'):'All items are done – please tick them in the app.','',`Open the app: ${appUrl()}`].join('\n');
-  return msg}
-function vRemind(t,s){const co=s===8&&ended(t),msg=remindMsg(t,s),k=remKey(t,s),last=(P(t).remind||{})[k];
+// WhatsApp reminder wording: short paragraphs, bold headings, one blank line between parts, so it reads well on a phone
+// Show *bold* and _italic_ in the preview the way WhatsApp will
+const waPreview=m=>esc(m).replace(/\*([^*\n]+)\*/g,'<b>$1</b>').replace(/(^|\s)_([^_\n]+)_/g,'$1<i>$2</i>');
+const firstName=n=>{const w=String(n||'').trim().split(/\s+/);return w[0]&&/\.$/.test(w[0])&&w[1]?w[0]+' '+w[1]:(w[0]||'')};
+function remindMsg(t,s,name){const co=s===8&&ended(t),due=co?closeBy(t):(DB.due[t.id]||{})[s],left=co?closeLeft(t):items(t,s).filter(x=>!isDone(t,x.key)),d=Math.round((new Date(due)-TODAY)/864e5);
+  const has=k=>left.some(x=>x.key===k),media=(t.media||'').trim(),trip=`${t.dest} ${yearOf(t)}`,hi=`Hi ${firstName(name)||'there'},`,url=appUrl();
+  const clean=x=>x.text.replace(/\s+/g,' ').trim();
+  if(co){const n=daysSince(t.end),parts=[];let k=0;
+    if(has('c_report'))parts.push(`*${++k}. Post-trip mission report*\nPlease write and submit it in the app (open the trip, then the *Mission report* tab).`);
+    if(has('c_media'))parts.push(`*${++k}. Photos & videos*\nPlease upload them to the trip folder${media?':\n'+media:'.'}`);
+    const fin=left.filter(x=>!['c_report','c_media'].includes(x.key));
+    if(fin.length)parts.push(`*${++k}. Finance*\n`+fin.map(x=>'- '+clean(x)).join('\n'));
+    return [`*TOW Missions Trip*`,`*Trip close-out: ${trip}*`,'',hi,'',
+      `Thank you for leading the trip! It ended on *${fd(t.end)}* (${n} day${n===1?'':'s'} ago).`,'',
+      parts.length?(d<0?`Please help us close it *as soon as possible* (it was due ${fd(due)}):`:`Please help us close it *by ${fd(due)}*:`):'Everything looks done. Please tick the last items in the app so the trip can be closed.',
+      ...(parts.length?['',parts.join('\n\n')]:[]),'',
+      `Tick each item in the app when done:\n${url}`,'','Thank you and God bless!','_TOW Missions Admin_'].join('\n')}
+  const when=d<0?`was due *${fd(due)}* (${-d} day${d<-1?'s':''} ago)`:d===0?`is due *today*`:`is due *${fd(due)}* (in ${d} day${d>1?'s':''})`;
+  return [`*TOW Missions Trip*`,`*Reminder: ${trip}*`,'',hi,'',`*Step ${s+1}: ${STAGES[s][1]}* ${when}.`,'',
+    left.length?'Still to do:\n'+left.map(x=>'- '+clean(x)).join('\n'):'Everything looks done. Please tick the items in the app.','',
+    `Tick each item in the app when done:\n${url}`,'','Thank you!','_TOW Missions Admin_'].join('\n')}
+function vRemind(t,s){const co=s===8&&ended(t),msg=remindMsg(t,s,t.pic),k=remKey(t,s),last=(P(t).remind||{})[k];
   const ph=nm=>{const r=nm&&regsOf(t).find(r=>r.name.toLowerCase()===String(nm).toLowerCase());let m=r&&String(r.mobile||'').replace(/\D/g,'');if(m&&m[0]==='0')m='6'+m;return m||''};
-  const b=(lab,nm)=>{const m=ph(nm);return nm?`<a class="btn ${lab==='PIC'?'pri':''}" data-act="remsent" data-id="${t.id}" data-k="${k}" href="https://wa.me/${m}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp ${lab} (${esc(nm)})</a>`:''};
+  const b=(lab,nm)=>{const m=ph(nm);return nm?`<a class="btn ${lab==='PIC'?'pri':''}" data-act="remsent" data-id="${t.id}" data-k="${k}" href="https://wa.me/${m}?text=${encodeURIComponent(remindMsg(t,s,nm))}" target="_blank" rel="noopener">WhatsApp ${lab} (${esc(nm)})</a>`:''};
   return `<div class="sheethead"><div><h2>Send a reminder</h2><p class="sub">${esc(t.dest)} ${yearOf(t)} · ${co?'Close the trip':'Step '+(s+1)}</p></div><button class="x" data-act="closebtn" aria-label="Close">×</button></div>
-  <pre class="regmsg">${esc(msg)}</pre><div class="row" style="margin-top:12px">${b('PIC',t.pic)}${b('A.PIC',t.apic)}<button class="btn" data-act="copy" data-v="${esc(msg)}">Copy message</button></div>
+  <pre class="regmsg remmsg">${waPreview(msg)}</pre><div class="row" style="margin-top:12px">${b('PIC',t.pic)}${b('A.PIC',t.apic)}<button class="btn" data-act="copy" data-v="${esc(msg)}">Copy message</button></div>
   <p class="small muted" style="margin:10px 0 0">${last?`Last reminder sent ${fd(last)}. `:''}${co?'This reminder comes up again on your Overview 3 and 7 days after the trip, then every week until the trip is closed.':'This reminder comes up on your Overview 3 days and 1 day before, on the due day, and every 3 days while overdue.'}</p>`}
 const m2=v=>(+v||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2});
 function printStatement(t){const f=finance(t),inn=f.L.filter(l=>l.dir==='in'),out=f.L.filter(l=>l.dir==='out'),W=DB.withdrawals.filter(w=>w.trip===t.id&&w.choice!=='-'&&w.posted!=='Yes'&&wPropose(t,w).refund>0);
