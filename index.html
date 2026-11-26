@@ -9,19 +9,20 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#f5f5f1;--surface:#fff;--sunk:#eeede6;--ink:#26251f;--muted:#69665a;--line:#e1ded2;
+  --bg:#f2f0ea;--surface:#fff;--sunk:#eeede6;--ink:#26251f;--muted:#69665a;--line:#e1ded2;
   --ol:#b5985a;--ol-ink:#7a6230;--ol-soft:#f5eedf;
   --green:#2f7a55;--green-soft:#e2f0e8;--red:#b0432f;--red-soft:#f8e4df;--blue:#2d5f8a;--blue-soft:#e2ecf5;--amber:#9a6a00;--amber-soft:#fbefd2;
+  --violet:#6a4c93;--violet-soft:#eee7f6;--teal:#1f7a7a;--teal-soft:#dff0ef;--shadow:0 1px 2px rgba(60,50,30,.06),0 4px 14px rgba(60,50,30,.05);
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#1a1a16;--surface:#23231e;--sunk:#2c2b25;--ink:#ecebe2;--muted:#a6a392;--line:#3a3931;
   --ol:#c9ad6e;--ol-ink:#dcc48e;--ol-soft:#3a3123;
-  --green:#6cc196;--green-soft:#1f3229;--red:#e98a75;--red-soft:#3d2520;--blue:#8db7de;--blue-soft:#1f2c39;--amber:#e6b85a;--amber-soft:#3a2f17;}}
+  --green:#6cc196;--green-soft:#1f3229;--red:#e98a75;--red-soft:#3d2520;--blue:#8db7de;--blue-soft:#1f2c39;--amber:#e6b85a;--amber-soft:#3a2f17;--violet:#b9a0dc;--violet-soft:#2c2438;--teal:#7cc9c4;--teal-soft:#1b3130;--shadow:none;}}
 :root[data-theme="dark"]{
   --bg:#1a1a16;--surface:#23231e;--sunk:#2c2b25;--ink:#ecebe2;--muted:#a6a392;--line:#3a3931;
   --ol:#c9ad6e;--ol-ink:#dcc48e;--ol-soft:#3a3123;
-  --green:#6cc196;--green-soft:#1f3229;--red:#e98a75;--red-soft:#3d2520;--blue:#8db7de;--blue-soft:#1f2c39;--amber:#e6b85a;--amber-soft:#3a2f17;}
+  --green:#6cc196;--green-soft:#1f3229;--red:#e98a75;--red-soft:#3d2520;--blue:#8db7de;--blue-soft:#1f2c39;--amber:#e6b85a;--amber-soft:#3a2f17;--violet:#b9a0dc;--violet-soft:#2c2438;--teal:#7cc9c4;--teal-soft:#1b3130;--shadow:none;}
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Manrope,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
@@ -445,7 +446,7 @@ tr.cancel td{color:var(--muted)}
 
 .closebar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;background:var(--amber-soft,#fdf3dc);border:1px solid var(--amber,#d9a21b);border-radius:12px;padding:12px 14px;margin-bottom:14px}.closebar.late{background:var(--red-soft,#fdecea);border-color:var(--red,#b42318)}.closebar>div:first-child{display:flex;flex-direction:column;gap:2px;flex:1 1 260px}.closebar .row{gap:8px}
 
-.rem{border-left:3px solid var(--amber,#d9a21b)}.remrow{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.remrow:first-of-type{border-top:0}.remrow>div:first-child{display:flex;flex-direction:column;gap:2px;flex:1 1 240px}.remrow .row{gap:8px;align-items:center}.remrow.sent>div:first-child{opacity:.6}
+.rem{border-left:3px solid var(--amber,#d9a21b);margin-bottom:14px}.remrow{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid var(--line)}.remrow:first-of-type{border-top:0}.remrow>div:first-child{display:flex;flex-direction:column;gap:2px;flex:1 1 240px}.remrow .row{gap:8px;align-items:center}.remrow.sent>div:first-child{opacity:.6}
 
 .pill{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:9999;display:flex;align-items:center;gap:8px;width:max-content;max-width:calc(100vw - 32px);text-align:left;background:#2b2620;color:#fff;font-size:14px;font-weight:600;line-height:1.3;padding:10px 16px;border-radius:999px;box-shadow:0 6px 24px rgba(0,0,0,.25);transition:opacity .2s,transform .2s;border:0;font-family:inherit}
 .pill.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -454,6 +455,44 @@ tr.cancel td{color:var(--muted)}
 .pill.ok::before{content:"✓";font-weight:800}
 @keyframes pillspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.pill{transition:none}.pill.busy::before{animation-duration:2s}}
+
+/* ===== v6.11 look: colour-coded tabs and section headers ===== */
+.panel{box-shadow:var(--shadow);border-color:color-mix(in srgb,var(--line) 80%,transparent)}
+nav.tabs button{display:inline-flex;align-items:center;gap:7px}
+nav.tabs .ni svg,.ttabs .ti svg,.secic svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button[aria-current="page"]{color:var(--ol-ink);background:var(--ol-soft)}
+.ttabs{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px}.ttabs button{flex:1 1 auto}
+.ttabs button{position:relative;display:flex;align-items:center;gap:8px;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-weight:700;font-size:14px;text-align:left;box-shadow:var(--shadow);transition:background .15s,border-color .15s,color .15s}
+.ttabs .ti{display:grid;place-items:center;width:30px;height:30px;flex:none;border-radius:9px;background:var(--acc-soft);color:var(--acc)}
+.ttabs .tl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttabs .tc{font-size:12px;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.ttabs button:hover{border-color:var(--acc);color:var(--ink)}
+.ttabs button[aria-selected="true"]{background:var(--acc-soft);border-color:var(--acc);color:var(--ink)}
+.ttabs button[aria-selected="true"] .ti{background:var(--acc);color:var(--surface)}
+.ttabs button[aria-selected="true"] .tc{background:var(--acc);color:var(--surface)}
+.ttabs button[aria-selected="true"]::after{content:"";position:absolute;left:50%;bottom:-9px;width:12px;height:12px;background:var(--acc-soft);border-right:1px solid var(--acc);border-bottom:1px solid var(--acc);transform:translateX(-50%) rotate(45deg)}
+.tabbody{border-top:3px solid var(--acc);padding-top:16px}
+.secnav{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 16px}
+.secnav span{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:4px}
+.secnav button{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:5px 11px;border-radius:999px;font-size:13px;font-weight:600}
+.secnav button:hover{border-color:var(--acc);background:var(--acc-soft)}
+.panel.sec>h2,.panel.sec .stephead h2,.panel.sec h2.sechd{display:flex;align-items:center;gap:10px}
+.secic{display:inline-grid;place-items:center;width:30px;height:30px;flex:none;border-radius:9px;background:var(--acc-soft);color:var(--acc)}
+h2.sechd{font-size:16px;font-weight:700;margin:0 0 12px}
+main{--acc:var(--ol-ink);--acc-soft:var(--ol-soft)}.panel.sec{border-top:3px solid var(--acc-soft)}
+.panel.flash{outline:2px solid var(--acc);outline-offset:2px;transition:outline-color .6s}
+.money div{position:relative}
+.money div::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:3px;background:var(--line)}
+.money .m-in::before{background:var(--green)}.money .m-out::before{background:var(--red)}.money .m-res::before{background:var(--amber)}.money .m-bal::before{background:var(--ol)}
+.money .m-in b{color:var(--green)}.money .m-bal b{color:var(--ol-ink)}
+@media (max-width:900px){.ttabs{display:grid;grid-template-columns:repeat(3,1fr)}.ttabs button[aria-selected="true"]::after{display:none}}
+@media (max-width:560px){
+  .ttabs{gap:6px}.ttabs button{flex-direction:column;align-items:center;text-align:center;gap:4px;padding:9px 4px 8px;font-size:12px}
+  .ttabs .tl{white-space:normal;line-height:1.2}.ttabs .tc{position:absolute;top:5px;right:5px;font-size:10px;padding:0 5px}
+  nav.tabs .ni{display:none}
+  .secnav{flex-wrap:nowrap;overflow-x:auto;margin-left:-16px;margin-right:-16px;padding:0 16px 2px;scrollbar-width:none}.secnav::-webkit-scrollbar{display:none}.secnav button{flex:none}
+}
+@media (prefers-reduced-motion:reduce){.ttabs button{transition:none}}
 </style>
 </head>
 <body>
@@ -843,7 +882,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#modal').innerHTML){close
   if(history.state&&history.state.app){e.preventDefault();history.back()}});
 function render(){
   const ae=document.activeElement,keep=ae&&ae.dataset&&(ae.dataset.set||ae.dataset.rep)?`[data-${ae.dataset.set?'set':'rep'}="${(ae.dataset.set||ae.dataset.rep).replace(/"/g,'\\"')}"]`:null;
-  renderInner();
+  renderInner();try{decorate()}catch(e){}
   if(keep){const el=document.querySelector(keep);if(el&&el!==ae)try{el.focus()}catch(e){}}
 }
 function renderInner(){
@@ -853,7 +892,7 @@ function renderInner(){
   const u=me();
   root.innerHTML=`<header class="top"><div class="wrap">
     <div class="brand"><img src="${LOGO_MARK}" alt=""><span>TOW Missions Trip</span></div>
-    <nav class="tabs" aria-label="Main">${[['overview','Overview'],['trips','Trips'],['people','Participants'],...(can('admin')?[['admin','Admin']]:[])].map(([v,l])=>`<button data-act="view" data-v="${v}" aria-current="${(S.trip?'trips':S.view)===v?'page':'false'}">${l}</button>`).join('')}</nav>
+    <nav class="tabs" aria-label="Main">${[['overview','Overview','home'],['trips','Trips','plane'],['people','Participants','people'],...(can('admin')?[['admin','Admin','gear']]:[])].map(([v,l,ic])=>`<button data-act="view" data-v="${v}" aria-current="${(S.trip?'trips':S.view)===v?'page':'false'}"><span class="ni">${ICON[ic]}</span>${l}</button>`).join('')}</nav>
     ${acctMenu(u)}
   </div></header><main><div class="wrap" id="app"></div></main>`;
   $('#app').innerHTML=S.trip&&T(S.trip)?vTrip(T(S.trip)):({overview:vOverview,trips:vTrips,people:vPeople,stats:vOverview,admin:vAdmin}[S.view]||vOverview)();
@@ -1042,24 +1081,63 @@ function vTrips(){
   ${tf?`<p><button class="link" data-act="tf" data-k="">‹ Show all years</button></p>`:''}`+
   (DB.trips.length?list.map(([h,ts])=>`<div class="panel"><h2>${h}</h2>${ts.map(tripRow).join('')||'<p class="muted">None</p>'}</div>`).join(''):`<div class="panel"><p class="empty">${can('all')?'No trips yet.':'No trips have been assigned to you yet. Ask the church admin to assign your trip.'}${can('all')?'<br><br><button class="btn pri" data-act="importmodal">Import your trip data from Excel</button>':''}</p></div>`);
 }
-const ICON={cal:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',dl:'<svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',print:'<svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>'};
+const ICON={
+ flow:'<svg viewBox="0 0 24 24"><path d="M4 6h6v4H4zM14 14h6v4h-6zM7 10v3a2 2 0 0 0 2 2h5"/></svg>',
+ people:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14c2.8 0 5 2.2 5 5"/></svg>',
+ teams:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+ money:'<svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
+ undo:'<svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12h-2" transform="translate(0 -6)"/></svg>',
+ doc:'<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+ link:'<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+ chart:'<svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><path d="M8 16v-5M12 16V8M16 16v-3"/></svg>',
+ split:'<svg viewBox="0 0 24 24"><path d="M12 3v7M12 10 5 17M12 10l7 7M5 17v3M19 17v3"/></svg>',
+ check:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
+ list:'<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
+ bell:'<svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
+ camera:'<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+ gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>',
+ meal:'<svg viewBox="0 0 24 24"><path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-2.5 5-2.5 8h3V21"/></svg>',
+ scale:'<svg viewBox="0 0 24 24"><path d="M12 4v16M6 20h12M5 8h14M5 8l-2.5 6a2.5 2.5 0 0 0 5 0zM19 8l-2.5 6a2.5 2.5 0 0 0 5 0z"/></svg>',
+ home:'<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"/></svg>',
+ plane:'<svg viewBox="0 0 24 24"><path d="M10 20l2-7-6-2 1-2 7 1 4-5a1.5 1.5 0 0 1 2 2l-5 4 1 7-2 1-2-6-2 7z"/></svg>',
+ cal:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',dl:'<svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',print:'<svg viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg>'};
 function nameLink(t,nm){if(!nm)return '<span class="muted">not set</span>';const r=regsOf(t).find(r=>r.name.toLowerCase()===nm.toLowerCase());return r?`<button class="link" data-act="profile" data-id="${r.id}">${esc(nm)}</button>`:`<button class="link" data-act="tab" data-t="people">${esc(nm)}</button>`}
 function tHead(t){return `<div class="thead2"><div class="tt1"><h1>${esc(t.dest)} <span>${yearOf(t)}</span></h1>
     <div class="iconbar"><a class="ib" href="${gTrip(t)}" target="_blank" rel="noopener" title="Add trip to Google Calendar" aria-label="Add trip to Google Calendar">${ICON.cal}</a><button class="ib" data-act="ics" data-id="${t.id}" title="Download all dates (.ics)" aria-label="Download all dates">${ICON.dl}</button>${can('edit')?`<button class="ib" data-act="edittrip" data-id="${t.id}" title="Edit trip" aria-label="Edit trip">${ICON.edit}</button>`:''}<button class="ib" data-act="print" data-id="${t.id}" title="Print trip pack (A4)" aria-label="Print trip pack">${ICON.print}</button></div></div>
   <p class="tmeta2">${fr(t.start,t.end)} · ${t.overseas?'Overseas':'Local'} · ${esc(t.id)} · Pay ref MS ${esc(t.id.slice(5))}${t.id.slice(2,4)}</p>
   <div class="pline"><span><i>PIC</i> ${nameLink(t,t.pic)}</span><span><i>A.PIC</i> ${nameLink(t,t.apic)}</span><span><i>Fee</i> ${rm(t.fee)}</span><span><i>Going</i> <button class="link" data-act="tab" data-t="people">${conf(t).length}</button></span><span>${statusBadge(t)}</span></div>
   ${isCancelled(t)?`<div class="warn r" style="margin:10px 0 0">Cancelled trip${t.cancelReason?': '+esc(t.cancelReason):''}. It stays listed as a planned trip for ${yearOf(t)}.</div>`:''}</div>`}
+// Each trip tab has its own colour and icon, so it's easy to tell where you are at a glance
+const TAB_META={workflow:['flow','ol'],people:['people','blue'],teams:['teams','violet'],finance:['money','green'],withdrawals:['undo','red'],report:['doc','teal']};
+const accVars=c=>`--acc:var(--${c==='ol'?'ol-ink':c});--acc-soft:var(--${c}-soft)`;
+function secIcon(title,fallback){const T=title.toLowerCase();
+  const m=[[/treasurer|entry link|links/,'link'],[/report|statement|cash book/,'doc'],[/split/,'split'],[/withdraw/,'undo'],[/close/,'check'],[/meal/,'meal'],[/spending|categor|chart|budget|cost/,'chart'],[/running|position|balance/,'scale'],[/media|photo/,'camera'],[/team|role/,'teams'],[/participant|people|who/,'people'],[/step|workflow|glance/,'flow'],[/admin|setup|setting/,'gear'],[/remind/,'bell'],[/entries|list/,'list'],[/finance|money|fund/,'money'],[/itinerar|travel|transport|flight|trips in|\d{4}\s*›?$/,'plane'],[/attention|overdue/,'bell']];
+  for(const [re,ic] of m)if(re.test(T))return ic;return fallback}
+// Gives every section inside a tab a coloured icon header, and adds a "Jump to" row when a tab has several sections
+function decorate(){const tb=document.querySelector('.tabbody'),body=tb||document.querySelector('main');if(!body)return;const tab=tb?tb.dataset.tab:'',fb=(TAB_META[tab]||['list'])[0];const secs=[];
+  [...body.querySelectorAll('.panel')].forEach(pn=>{if(pn.closest('.panel')!==pn||pn.parentElement.closest('.panel'))return;
+    let h=pn.querySelector('h2');const tag=pn.dataset.sec;
+    if(!h&&tag){const hd=document.createElement('h2');hd.className='sechd';hd.textContent=tag;pn.prepend(hd);h=hd}
+    if(!h||h.dataset.dec)return;h.dataset.dec=1;
+    const title=(h.childNodes[0]&&h.childNodes[0].nodeType===3?h.childNodes[0].textContent:h.textContent).trim().replace(/[:·]+$/,'');
+    const ic=document.createElement('span');ic.className='secic';ic.innerHTML=ICON[secIcon(title,fb)]||ICON[fb];h.prepend(ic);
+    pn.classList.add('sec');pn.id=pn.id||'sec-'+secs.length;secs.push([pn.id,title.replace(/^Step \d+:\s*/,'Step: ').slice(0,34)])});
+  const old=body.querySelector('.secnav');if(old)old.remove();
+  if(tb&&secs.length>=3){const nav=document.createElement('nav');nav.className='secnav';nav.setAttribute('aria-label','Sections in this tab');
+    nav.innerHTML='<span>In this tab</span>'+secs.map(([id,t])=>`<button type="button" data-jump="${id}">${esc(t)}</button>`).join('');body.prepend(nav)}}
+document.addEventListener('click',e=>{const j=e.target.closest('[data-jump]');if(!j)return;const el=document.getElementById(j.dataset.jump);if(el){const y=el.getBoundingClientRect().top+scrollY-80;scrollTo({top:y,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1200)}});
 function vTrip(t){
   const cs=curStage(t),sel=S.stage??Math.min(cs,8),fillW=(Math.min(cs,8)/8*89)+'%';
-  const tabs=[['workflow','Workflow'],['people',`Participants (${conf(t).length})`],['teams','Teams & roles'],['finance','Finance'],['withdrawals','Withdrawals'],['report','Mission report']];
+  const nW=DB.withdrawals.filter(w=>w.trip===t.id).length,rep=DB.reports[t.id]||{},repDone=isDone(t,'c_report');
+  const tabs=[['workflow','Workflow',isClosed(t)?'✓':`${Math.min(cs,8)+1}/9`],['people','Participants',conf(t).length],['teams','Teams & roles',(DB.teams[t.id]||[]).length||''],['finance','Finance',''],['withdrawals','Withdrawals',nW||''],['report','Mission report',repDone?'✓':'']];
   return `<button class="back" data-act="back">‹ All trips</button>
   ${tHead(t)}
   ${can('edit')&&STAGES.some((_,k)=>!(DB.due[t.id]||{})[k])&&!isClosed(t)?`<div class="banner w">Some steps have no due date. <button class="link small" data-act="sugdue" data-id="${t.id}" data-s="all">Fill in suggested due dates</button></div>`:''}
   <div class="journey"><div class="track"><div class="fill" style="width:0" data-w="${fillW}"></div>
     ${STAGES.map((st,s)=>{const p=stageProg(t,s),due=(DB.due[t.id]||{})[s],late=!p.full&&due&&new Date(due)<TODAY;return `<button class="st ${p.full?'done':s===cs?'cur':''} ${late?'late':''}" data-act="stage" data-s="${s}" aria-pressed="${s===sel&&S.tab==='workflow'}"><span class="c">${p.full?'✓':s+1}</span><span class="l">${st[0]}</span><span class="p">${due?fd(due).replace(/ \d{4}$/,''):p.n+'/'+p.of}</span></button>`}).join('')}
   </div><div class="jlab">Step ${sel+1} of 9: ${STAGES[sel][1]} · ${stageProg(t,sel).n}/${stageProg(t,sel).of} done</div></div>
-  <div class="subtabs" role="tablist">${tabs.map(([k,l])=>`<button role="tab" data-act="tab" data-t="${k}" aria-selected="${S.tab===k}">${l}</button>`).join('')}</div>
-  ${({workflow:()=>tWorkflow(t,sel),people:()=>tPeople(t),teams:()=>tTeams(t),finance:()=>tFinance(t),withdrawals:()=>tWithdraw(t),report:()=>tReport(t)})[S.tab]()}`;
+  <div class="ttabs" role="tablist" aria-label="Trip sections">${tabs.map(([k,l,c])=>{const [ic,col]=TAB_META[k];return `<button role="tab" data-act="tab" data-t="${k}" aria-selected="${S.tab===k}" style="${accVars(col)}"><span class="ti">${ICON[ic]}</span><span class="tl">${l}</span>${c!==''&&c!=null?`<span class="tc">${c}</span>`:''}</button>`}).join('')}</div>
+  <div class="tabbody" data-tab="${S.tab}" style="${accVars((TAB_META[S.tab]||['','ol'])[1])}">${({workflow:()=>tWorkflow(t,sel),people:()=>tPeople(t),teams:()=>tTeams(t),finance:()=>tFinance(t),withdrawals:()=>tWithdraw(t),report:()=>tReport(t)})[S.tab]()}</div>`;
 }
 const mediaRoot=()=>((DB.priv||{}).mediaRoot||DB.settings.driveRoot||'').trim();
 function mediaBox(t){
@@ -1070,7 +1148,7 @@ function mediaBox(t){
   return `<div class="mediabox"><label>Upload folder for this trip</label>${L?`<div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(L)}" onclick="this.select()" aria-label="Upload folder link"><a class="btn sm pri" href="${esc(L)}" target="_blank" rel="noopener">Open & upload</a></div>${shareRow(L,msg)}`:'<p class="small muted" style="margin:4px 0 0">The upload folder for this trip hasn\'t been set yet. Ask the church admin.</p>'}</div>`;
 }
 const shareRow=(L,msg)=>`<div class="row" style="margin-top:8px"><button class="btn sm" data-act="copy" data-v="${esc(L)}">Copy link</button><a class="btn sm" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">Share on WhatsApp</a></div>`;
-const APP_VER='6.10';
+const APP_VER='6.11';
 // User IDs: spaces become dots, other symbols are dropped (e.g. "Mary Tan" → "mary.tan")
 const cleanId=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,'.').replace(/[^a-z0-9._-]/g,'').replace(/\.{2,}/g,'.').replace(/^[.]|[.]$/g,'');
 const regLink=()=>((DB.forms||{}).regform||'').trim();
@@ -1347,12 +1425,12 @@ function tFinance(t){
   const closePanel=`<div class="panel"><h2>Close-out</h2>${f.balance>0.009&&ro?`<p class="small">Balance ${rm(f.balance)} left. <button class="btn sm pri" data-act="surplus" data-id="${t.id}">Distribute surplus</button></p>`:''}${closeBox(t)}</div>`;
   return `${forms(['finance'])}${modeSwitch(t)}${f.claims.length?`<div class="warn r">${f.claims.length} personal payment${f.claims.length>1?'s':''} waiting to be claimed. Ask treasurers to pay directly next time so no one uses their own money.</div>`:''}
   ${link}
-  <div class="money" style="margin-top:20px"><div><span>Money in</span><b>${rm(f.inn)}</b></div><div><span>Spent</span><b>${rm(f.spent)}</b></div><div><span>Reserved (to pay)</span><b>${rm(f.reserved)}</b></div><div><span>${closed?'Surplus to refund':'Balance'}</span><b>${rm(f.balance)}</b>${f.tIn?`<span class="small" style="display:block;margin-top:2px">With treasurers ${rm(f.withT)} · church ${rm(f.withChurch)}</span>`:''}</div></div>
+  <div class="money" style="margin-top:20px"><div class="m-in"><span>Money in</span><b>${rm(f.inn)}</b></div><div class="m-out"><span>Spent</span><b>${rm(f.spent)}</b></div><div class="m-res"><span>Reserved (to pay)</span><b>${rm(f.reserved)}</b></div><div class="m-bal"><span>${closed?'Surplus to refund':'Balance'}</span><b>${rm(f.balance)}</b>${f.tIn?`<span class="small" style="display:block;margin-top:2px">With treasurers ${rm(f.withT)} · church ${rm(f.withChurch)}</span>`:''}</div></div>
   <div class="panel reports"><div class="stephead"><h2 style="margin:0">Reports</h2><span class="small muted">PDF: choose "Save as PDF" in the print window</span></div>
    <div class="rgrid"><div><b>Statement of accounts</b><span class="small muted">Income and expenses by category, with totals and signatures</span><div class="row"><button class="btn sm" data-act="printstmt" data-id="${t.id}">PDF</button><button class="btn sm" data-act="csvstmt" data-id="${t.id}">CSV</button></div></div>
    <div><b>Cash book</b><span class="small muted">Every entry by date with the running balance</span><div class="row"><button class="btn sm" data-act="printcb" data-id="${t.id}">PDF</button><button class="btn sm" data-act="csvcb" data-id="${t.id}">CSV</button></div></div></div></div>
   ${splitPanel(t)}
-  <div class="panel"><div class="stephead"><div class="row">${[['all','All entries'],['in','Money in'],['out','Money out'],['claims','Personal claims'],['link','Via treasurer link'],...(f.X.length?[['xfer','Handed to treasurers']]:[])].map(([k,l])=>`<button class="chip" data-act="filter" data-f="${k}" aria-pressed="${(['in','out','claims','link'].includes(S.f)?S.f:'all')===k}">${l}</button>`).join('')}</div>${ro?`<button class="btn sm pri" data-act="ledger" data-id="${t.id}">Add entry</button>`:''}</div>
+  <div class="panel" data-sec="Entries"><div class="stephead"><div class="row">${[['all','All entries'],['in','Money in'],['out','Money out'],['claims','Personal claims'],['link','Via treasurer link'],...(f.X.length?[['xfer','Handed to treasurers']]:[])].map(([k,l])=>`<button class="chip" data-act="filter" data-f="${k}" aria-pressed="${(['in','out','claims','link'].includes(S.f)?S.f:'all')===k}">${l}</button>`).join('')}</div>${ro?`<button class="btn sm pri" data-act="ledger" data-id="${t.id}">Add entry</button>`:''}</div>
   <div class="tbl"><table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Paid by</th><th>Status</th><th class="num">Credit (in)</th><th class="num">Debit (out)</th><th class="num balc">Running balance</th>${ro?'<th></th>':''}</tr></thead><tbody>
   ${fl.map(l=>`<tr><td style="white-space:nowrap">${fd(l.date)}</td><td>${esc(l.cat)}</td><td>${esc(l.desc)}${l.pid&&REG(l.pid)?` · ${esc(REG(l.pid).name)}`:''}${l.ref?` <span class="muted small">${esc(l.ref)}</span>`:''}${l.receipt?` <a class="small" href="${esc(l.receipt)}" target="_blank" rel="noopener">receipt</a>`:''}${isSplit(t)&&l.dir==='out'&&!CLOSE_CATS.includes(l.cat)?` <span class="badge ${spFor(l)?'b-amber':'b-grey'}">${spFor(l)?'for '+(spFor(l).length===1?esc((REG(spFor(l)[0])||{}).name||'1 person'):spFor(l).length+' people'):'shared'}</span>`:''}${l.source==='Treasurer link'?` <span class="badge b-blue">via treasurer link${l.enteredBy?' · '+esc(l.enteredBy):''}</span>`:''}</td><td>${l.dir==='out'?esc(l.paidBy):'—'}</td>
    <td><span class="badge ${l.status==='Paid'||l.status==='Claimed'?'b-green':l.status==='Reserved'?'b-blue':'b-amber'}">${esc(l.status)}</span></td><td class="num">${isXfer(l)?`<span class="xfer" title="Moved from the church account to the treasurer. Not new money, so the balance doesn't change.">⇄ ${rm(l.amount)}</span>`:l.dir==='in'?rm(l.amount):''}</td><td class="num">${l.dir==='out'?rm(l.amount):''}</td><td class="num balc"><b>${run[l.id]===null?'<span class="muted">reserved</span>':rm(run[l.id])}</b></td>${ro?`<td><button class="link small" data-act="ledger" data-id="${t.id}" data-l="${l.id}">Edit</button></td>`:''}</tr>`).join('')||'<tr><td colspan="9" class="empty">No entries.</td></tr>'}
